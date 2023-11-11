@@ -61,6 +61,11 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18
+          
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'  # Choose the appropriate version
 
       - run: npm install --no-audit
       - run: |
