@@ -131,9 +131,9 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
         setCloudChainsStoredPassword(validPw(CC_WALLET_PASS) || validPw(storedPw));
         setInitialLoadStep2(true); // done loading
 
-  // In dev mode you can set a CC_WALLET_PASS environmental variable to automatically populate your password on login
+  // you can set a CC_WALLET_PASS environmental variable to automatically populate your password on login
   // and if you also have a CC_WALLET_AUTOLOGIN environmental variable set to true, then the wallet will autologin
-        if (isDev && validPw(CC_WALLET_PASS) && CC_WALLET_AUTOLOGIN === 'true') {
+        if (validPw(CC_WALLET_PASS) && CC_WALLET_AUTOLOGIN === 'true') {
           setTimeout(() => {
             onLoginSubmit();
           }, 250);
