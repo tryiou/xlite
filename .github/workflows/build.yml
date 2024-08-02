@@ -1,5 +1,6 @@
 name: build-all
 
+
 on:
   push:
     branches:
