@@ -1,8 +1,9 @@
-@import './variables';
+@use "sass:color";
+@use 'variables';
 
 .lw-card-container {
 
-  $header-background-color: $lw-bg-6;
+  $header-background-color: variables.$lw-bg-6;
   $header-height: 50px;
   $header-top-bottom-padding: 10px;
 
@@ -29,7 +30,7 @@
     justify-content: flex-start;
 
     h1, h2, h3, h4, h5 {
-      color: $lw-text-primary;
+      color: variables.$lw-text-primary;
       line-height: 30px;
       font-size: 16px;
       flex-grow: 1;
@@ -38,7 +39,7 @@
   }
 
   .lw-card-body {
-    background-color: $lw-bg-5;
+    background-color: variables.$lw-bg-5;
     width: 100%;
     flex-grow: 1;
     min-height: 0;
@@ -58,7 +59,7 @@
     text-align: center;
 
     a {
-      color: $lw-text-primary;
+      color: variables.$lw-text-primary;
       font-size: 13px;
       line-height: $footer-height;
       text-decoration: none;
@@ -68,12 +69,12 @@
       }
 
       &:hover {
-        color: darken($lw-text-primary, 15%);
+        color: color.adjust(variables.$lw-text-primary, $lightness: -15%);
         text-decoration: none;
       }
 
       &:active, &:focus {
-        color: $lw-text-primary;
+        color: variables.$lw-text-primary;
         text-decoration: none;
       }
     }
@@ -87,7 +88,7 @@
     font-stretch: normal;
     font-size: 11px;
     line-height: 13px;
-    color: $lw-secondary-4;
+    color: variables.$lw-secondary-4;
   }
 }
 

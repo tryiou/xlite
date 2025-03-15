@@ -1,15 +1,15 @@
-@import './variables';
-@import './mixins';
+@use 'variables';
+@use 'mixins';
 
 .lw-copyable-link-container {
 
   display: inline-block;
 
   .lw-copyable-link-text {
-    color: $lw-text-primary;
+    color: variables.$lw-text-primary;
     cursor: pointer;
     opacity: 1;
-    @include default-hover-transition(opacity);
+    @include mixins.default-hover-transition(opacity);
 
     &:hover {
       opacity: .85;
@@ -17,10 +17,10 @@
   }
 
   .lw-copyable-link-button {
-    color: $lw-text-primary;
+    color: variables.$lw-text-primary;
     text-decoration: none;
     opacity: 1;
-    @include default-hover-transition(opacity);
+    @include mixins.default-hover-transition(opacity);
 
     &:hover, &:focus {
       text-decoration: none;
@@ -36,9 +36,9 @@
 
 .lw-modal-copyable-link {
   span.lw-copyable-link-text {
-    color: $lw-modal-default-text-color;
+    color: variables.$lw-modal-default-text-color;
   }
   a.lw-copyable-link-button {
-    color: $lw-modal-default-text-color;
+    color: variables.$lw-modal-default-text-color;
   }
 }

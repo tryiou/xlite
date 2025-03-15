@@ -1,34 +1,35 @@
-@import "./bootstrap/bootstrap";
-@import "./fontawesome/regular";
-@import "./fontawesome/solid";
-@import "./fontawesome/brands";
-@import "./fontawesome/fontawesome";
-@import "../../node_modules/react-perfect-scrollbar/dist/css/styles";
-@import "../../node_modules/sweetalert2/dist/sweetalert2";
-@import "./lw/variables";
-@import "./lw/login";
-@import "./lw/navbar";
-@import "./lw/buttons";
-@import "./lw/dropdown";
-@import "./lw/sidebar";
-@import "./lw/inputs";
-@import "./lw/balance";
-@import "./lw/transactions";
-@import "./lw/card";
-@import "./lw/table";
-@import "./lw/modal";
-@import "./lw/modal-receive";
-@import "./lw/modal-send";
-@import "./lw/portfolio";
-@import "./lw/modal-transaction-detail";
-@import "./lw/dashboard";
-@import "./lw/alerts";
-@import "./lw/spinner";
-@import "./lw/copyable-link";
-@import "./lw/filter-menu";
-@import "./lw/chart";
-@import "./lw/mixins";
-@import "./lw/beta-warning";
+@use "sass:color";
+@use "bootstrap/bootstrap";
+@use "fontawesome/regular";
+@use "fontawesome/solid";
+@use "fontawesome/brands";
+@use "fontawesome/fontawesome";
+@use "../../node_modules/react-perfect-scrollbar/dist/css/styles";
+@use "../../node_modules/sweetalert2/dist/sweetalert2";
+@use "lw/variables";
+@use "lw/login";
+@use "lw/navbar";
+@use "lw/buttons";
+@use "lw/dropdown";
+@use "lw/sidebar";
+@use "lw/inputs";
+@use "lw/balance";
+@use "lw/transactions";
+@use "lw/card";
+@use "lw/table";
+@use "lw/modal";
+@use "lw/modal-receive";
+@use "lw/modal-send";
+@use "lw/portfolio";
+@use "lw/modal-transaction-detail";
+@use "lw/dashboard";
+@use "lw/alerts";
+@use "lw/spinner";
+@use "lw/copyable-link";
+@use "lw/filter-menu";
+@use "lw/chart";
+@use "lw/mixins";
+@use "lw/beta-warning";
 
 // Change default sweetalert z-index
 .swal2-container {
@@ -36,57 +37,57 @@
 }
 
 .color-negative {
-  color: $lw-negative-1;
+  color: variables.$lw-negative-1;
 }
 
 .lw-color-positive-1 {
-  color: $lw-positive-1;
+  color: variables.$lw-positive-1;
 }
 .lw-text-primary {
-  color: $lw-text-primary;
+  color: variables.$lw-text-primary;
 }
 a.lw-text-primary {
-  color: $lw-text-primary;
+  color: variables.$lw-text-primary;
   &:hover, &:focus, &:active {
     text-decoration: none;
-    color: darken($lw-text-primary, 10%);
+    color: color.adjust(variables.$lw-text-primary, $lightness: -10%);
   }
 }
 .lw-color-secondary-2 {
-  color: $lw-secondary-2;
+  color: variables.$lw-secondary-2;
 }
 .lw-color-secondary-3 {
-  color: $lw-secondary-3;
+  color: variables.$lw-secondary-3;
 }
 .lw-color-secondary-4 {
-  color: $lw-secondary-4;
+  color: variables.$lw-secondary-4;
 }
 .lw-color-secondary-5 {
-  color: $lw-secondary-5;
+  color: variables.$lw-secondary-5;
 }
 .lw-color-secondary-6 {
-  color: $lw-secondary-6;
+  color: variables.$lw-secondary-6;
 }
 .lw-color-secondary-10 {
-  color: $lw-secondary-10 !important;
+  color: variables.$lw-secondary-10 !important;
 }
 a.lw-color-secondary-10 {
-  color: $lw-secondary-10;
+  color: variables.$lw-secondary-10;
   &:hover, &:focus, &:active {
     text-decoration: none;
-    color: lighten($lw-secondary-10, 10%);
+    color: color.adjust(variables.$lw-secondary-10, $lightness: 10%);
   }
 }
 .lw-bg-secondary-2 {
-  background-color: $lw-secondary-2;
+  background-color: variables.$lw-secondary-2;
 }
 .lw-bg-secondary-6 {
-  background-color: $lw-secondary-6;
+  background-color: variables.$lw-secondary-6;
 }
 
 body {
-  background-color: $lw-bg-4;
-  color: $lw-text-primary;
+  background-color: variables.$lw-bg-4;
+  color: variables.$lw-text-primary;
 }
 
 .lw-coin-select {
@@ -101,10 +102,10 @@ body {
   align-items: center;
   align-content: center;
   text-decoration: none;
-  border-color: $lw-secondary-2;
+  border-color: variables.$lw-secondary-2;
   border-width: 1px;
   border-style: solid;
-  border-radius: $lw-button-border-radius;
+  border-radius: variables.$lw-button-border-radius;
   margin-top: 5px;
   padding-left: 20px;
   padding-right: 20px;
@@ -167,10 +168,10 @@ $lw-input-text-color: #444444;
   align-items: center;
   align-content: center;
   text-decoration: none;
-  border-color: $lw-secondary-2;
+  border-color: variables.$lw-secondary-2;
   border-width: 1px;
   border-style: solid;
-  border-radius: $lw-button-border-radius;
+  border-radius: variables.$lw-button-border-radius;
   margin-top: 5px;
   margin-bottom: 5px;
   padding-left: 20px;
@@ -200,9 +201,9 @@ $lw-input-text-color: #444444;
     line-height: 54px;
     border-left-style: solid;
     border-left-width: 1px;
-    border-left-color: $lw-secondary-2;
-    border-radius-topright: $lw-button-border-radius;
-    border-radius-bottomright: $lw-button-border-radius;
+    border-left-color: variables.$lw-secondary-2;
+    border-radius-topright: variables.$lw-button-border-radius;
+    border-radius-bottomright: variables.$lw-button-border-radius;
   }
 
 }
@@ -211,10 +212,10 @@ textarea.lw-textarea {
   color: $lw-input-text-color;
   font-size: 16px;
   width: 100%;
-  border-color: $lw-secondary-2;
+  border-color: variables.$lw-secondary-2;
   border-width: 1px;
   border-style: solid;
-  border-radius: $lw-button-border-radius;
+  border-radius: variables.$lw-button-border-radius;
   padding-top: 15px;
   padding-bottom: 15px;
   padding-left: 20px;
@@ -227,9 +228,9 @@ textarea.lw-textarea {
 }
 
 a.lw-color-secondary-6 {
-  color: $lw-secondary-6;
+  color: variables.$lw-secondary-6;
   &:hover, &:focus, &:active {
-    color: $lw-secondary-6;
+    color: variables.$lw-secondary-6;
   }
 }
 
@@ -243,9 +244,9 @@ a.lw-color-secondary-6 {
 }
 
 a.lw-send-max-toggle {
-  color: $lw-secondary-6;
+  color: variables.$lw-secondary-6;
   &:hover, &:focus, &:active {
-    color: darken($lw-secondary-6, 20%);
+    color: color.adjust(variables.$lw-secondary-6, $lightness: -20%);
     text-decoration: none;
   }
 }
@@ -254,14 +255,14 @@ div.lw-percent-bar {
 
   $lw-percent-bar-height: 6px;
 
-  background-color: $lw-secondary-7;
+  background-color: variables.$lw-secondary-7;
   width: 100%;
   height: $lw-percent-bar-height;
   border-radius: 3px;
   overflow: hidden;
 
   div {
-    background-color: $lw-positive-1;
+    background-color: variables.$lw-positive-1;
     height: $lw-percent-bar-height;
     width: 0;
   }
@@ -295,7 +296,7 @@ div.lw-percent-bar {
   height: 20px;
   width: 20px;
   background-color: transparent;
-  border: 2px solid $lw-secondary-6;
+  border: 2px solid variables.$lw-secondary-6;
   border-radius: 50%;
 }
 
@@ -310,9 +311,9 @@ div.lw-percent-bar {
   left: 3px;
   width: 10px;
   height: 10px;
-  border: 2px solid $lw-secondary-6;
+  border: 2px solid variables.$lw-secondary-6;
   border-radius: 50%;
-  background: $lw-secondary-6;
+  background: variables.$lw-secondary-6;
 }
 
 a.inactive {
@@ -321,7 +322,7 @@ a.inactive {
 }
 
 a, button {
-  @include default-hover-transition(color, background-color, opacity);
+  @include mixins.default-hover-transition(color, background-color, opacity);
 }
 
 .dropdown-menu.show {

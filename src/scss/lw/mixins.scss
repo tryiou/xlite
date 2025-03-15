@@ -1,7 +1,7 @@
-@import './variables';
+@use 'variables';
 
 @mixin default-hover-transition($properties...) {
   transition-property: $properties;
-  transition-duration: $default-transition-length;
-  transition-timing-function: $default-transition-timing-func;
+  transition-duration: variables.$default-transition-length;
+  transition-timing-function: variables.$default-transition-timing-func;
 }

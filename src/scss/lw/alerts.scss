@@ -1,12 +1,12 @@
-@import "./variables";
-@import "./buttons";
+@use "variables";
+@use "buttons";
 
 @mixin lw-alert-button($alert-button-color, $alert-button-border-color, $alert-button-hover-color, $alert-button-hover-border-color, $alert-button-text-color) {
   background-color: $alert-button-color;
   color: $alert-button-text-color;
-  min-width: $lw-button-min-width;
-  padding-left: $lw-button-padding-x;
-  padding-right: $lw-button-padding-x;
+  min-width: buttons.$lw-button-min-width;
+  padding-left: buttons.$lw-button-padding-x;
+  padding-right: buttons.$lw-button-padding-x;
   padding-top: 1px;
   padding-bottom: 1px;
   box-sizing: border-box;
@@ -37,17 +37,17 @@
 }
 
 .lw-alert-content {
-  color: $lw-secondary-6;
+  color: variables.$lw-secondary-6;
 }
 
 .lw-alert-buttons-container {
 
   .lw-alert-button-confirm {
-    @include lw-alert-button($lw-button-background-color, $lw-button-background-color, $lw-button-background-hover-color, $lw-button-background-hover-color, $lw-button-text-color);
+    @include lw-alert-button(buttons.$lw-button-background-color, buttons.$lw-button-background-color, buttons.$lw-button-background-hover-color, buttons.$lw-button-background-hover-color, buttons.$lw-button-text-color);
   }
 
   .lw-alert-button-cancel {
-    @include lw-alert-button(#fff, $lw-secondary-3, $lw-secondary-1, $lw-secondary-3, $lw-secondary-6);
+    @include lw-alert-button(#fff, variables.$lw-secondary-3, variables.$lw-secondary-1, variables.$lw-secondary-3, variables.$lw-secondary-6);
   }
 
 }

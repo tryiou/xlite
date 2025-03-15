@@ -1,10 +1,11 @@
-@import './variables';
-@import './fonts';
-@import './mixins';
+@use "sass:color";
+@use 'variables';
+@use 'fonts';
+@use 'mixins';
 
-$lw-button-background-color: $lw-bg-2;
-$lw-button-background-hover-color: $lw-bg-1;
-$lw-button-text-color: $lw-text-primary;
+$lw-button-background-color: variables.$lw-bg-2;
+$lw-button-background-hover-color: variables.$lw-bg-1;
+$lw-button-text-color: variables.$lw-text-primary;
 $lw-button-transparent-text-color: #444444;
 $lw-button-min-width: 150px;
 $lw-button-padding-x: 38px;
@@ -12,7 +13,7 @@ $lw-button-height: 40px;
 $lw-button-font-size: 16px;
 
 button {
-  border-radius: $lw-button-border-radius;
+  border-radius: variables.$lw-button-border-radius;
 }
 
 .lw-button {
@@ -29,17 +30,17 @@ button {
   min-width: $lw-button-min-width;
   height: $lw-button-height;
   font-size: $lw-button-font-size;
-  border-radius: $lw-button-border-radius;
+  border-radius: variables.$lw-button-border-radius;
   background-color: $lw-button-background-color;
   color: $lw-button-text-color;
   user-select: none;
-  @include default-hover-transition(background-color);
+  @include mixins.default-hover-transition(background-color);
 
   &.lw-button-transparent {
     background-color: transparent;
     color: $lw-button-transparent-text-color;
     min-width: 0;
-    @include default-hover-transition(opacity);
+    @include mixins.default-hover-transition(opacity);
 
     &:disabled {
       opacity: .55;
@@ -56,9 +57,9 @@ button {
   }
 
   &:disabled {
-    background-color: lighten($lw-button-background-color, 15%);
+    background-color: color.adjust($lw-button-background-color, $lightness: 15%);
     &:hover {
-      background-color: lighten($lw-button-background-color, 15%);
+      background-color: color.adjust($lw-button-background-color, $lightness: 15%);
     }
   }
   &:focus {
@@ -66,7 +67,7 @@ button {
     outline-offset: 0;
   }
   &:hover {
-    background-color: darken($lw-button-background-color, 10%);
+    background-color: color.adjust($lw-button-background-color, $lightness: -10%);
     background-color: $lw-button-background-hover-color;
   }
   //&.light-hover {
@@ -93,22 +94,22 @@ button {
   max-height: 32px;
   padding: 6px 10px;
   text-align: center;
-  border: 1px solid $lw-secondary-5;
+  border: 1px solid variables.$lw-secondary-5;
   border-radius: 6px;
   margin: 5px 0 5px 10px;
-  color: $lw-secondary-5;
+  color: variables.$lw-secondary-5;
   cursor: pointer;
   font-family: IBMPlexSans;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.67;
-  @include default-hover-transition(border-color, color);
+  @include mixins.default-hover-transition(border-color, color);
 
   letter-spacing: normal;
 
   &:hover {
-    color: $lw-text-primary;
-    border: 1px solid $lw-secondary-1;
+    color: variables.$lw-text-primary;
+    border: 1px solid variables.$lw-secondary-1;
 
     img {
       filter: brightness(0) invert(1);
@@ -117,8 +118,8 @@ button {
   }
 
   &.active {
-    color: $lw-text-primary;
-    border: 1px solid $lw-secondary-1;
+    color: variables.$lw-text-primary;
+    border: 1px solid variables.$lw-secondary-1;
 
     img {
       filter: brightness(0) invert(1);

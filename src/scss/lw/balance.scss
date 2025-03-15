@@ -1,4 +1,4 @@
-@import './variables';
+@use 'variables';
 
 .lw-balance-outer-container {
 
@@ -9,7 +9,7 @@
   .lw-balance-note {
     font-size: 13px;
     line-height: 17px;
-    color: $lw-secondary-2;
+    color: variables.$lw-secondary-2;
   }
 
   .lw-balance-container {
@@ -20,7 +20,7 @@
       margin-bottom: 0;
     }
     .lw-balance-alt-currency-note {
-      color: $lw-secondary-2;
+      color: variables.$lw-secondary-2;
       display: inline-block;
       margin-left: 10px;
       font-weight: 500;
@@ -41,7 +41,7 @@
       font-style: normal;
       line-height: 1.29;
       letter-spacing: normal;
-      color: $lw-secondary-2;
+      color: variables.$lw-secondary-2;
     }
 
     img {
@@ -58,7 +58,7 @@
     font-stretch: normal;
   }
   h4 {
-    color: $lw-secondary-2;
+    color: variables.$lw-secondary-2;
     font-size: 16px;
     margin-left: 10px;
     display: inline-block;

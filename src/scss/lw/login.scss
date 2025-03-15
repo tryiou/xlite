@@ -1,11 +1,12 @@
-@import './variables';
+@use "sass:color";
+@use 'variables';
 
-$lw-login-background-color: $lw-bg-6;
-$lw-login-input-border-color: $lw-secondary-6;
-$lw-login-input-border-color-active: $lw-secondary-5;
+$lw-login-background-color: variables.$lw-bg-6;
+$lw-login-input-border-color: variables.$lw-secondary-6;
+$lw-login-input-border-color-active: variables.$lw-secondary-5;
 $lw-login-input-border-width: 1px;
 $lw-login-input-total-height: 56px;
-$lw-login-text-color: $lw-secondary-1;
+$lw-login-text-color: variables.$lw-secondary-1;
 $lw-login-input-total-width: 320px;
 $lw-login-logo-total-width: 230px;
 
@@ -63,7 +64,7 @@ $lw-login-logo-total-width: 230px;
   box-sizing: border-box;
 
   button {
-    color: $lw-secondary-6;
+    color: variables.$lw-secondary-6;
     height: $lw-login-input-total-height;
     line-height: $lw-login-input-total-height;
     font-size: 19px;
@@ -100,7 +101,7 @@ $lw-login-logo-total-width: 230px;
       display: inline-block;
       width: $svg-icon-height;
       height: $svg-icon-height;
-      fill: $lw-nav-selected;
+      fill: variables.$lw-nav-selected;
     }
 
   }
@@ -174,11 +175,11 @@ $lw-login-logo-total-width: 230px;
 .lw-login-create-from-mnemonic-button-container {
   margin-bottom: 5px;
   .lw-login-create-from-mnemonic-button {
-    color: $lw-secondary-6;
+    color: variables.$lw-secondary-6;
     font-size: 13px;
     cursor: pointer;
     &:hover {
-      color: lighten($lw-secondary-6, 15%);
+      color: color.adjust(variables.$lw-secondary-6, $lightness: 15%);
     }
   }
 }

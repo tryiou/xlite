@@ -1,5 +1,5 @@
-@import './variables';
-@import './fonts';
+@use 'variables';
+@use 'fonts';
 
 .lw-dashboard-chart {
   position: relative;

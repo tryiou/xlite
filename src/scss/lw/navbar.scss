@@ -1,11 +1,11 @@
-@import './variables';
+@use 'variables';
 
-$lw-navbar-background: $lw-bg-6;
+$lw-navbar-background: variables.$lw-bg-6;
 $lw-navbar-height: 60px;
 $lw-navbar-vert-padding: 10px;
 $lw-navbar-horiz-padding: 20px;
 $lw-navbar-inner-height: $lw-navbar-height - $lw-navbar-vert-padding - $lw-navbar-vert-padding;
-$lw-navbar-text-color: $lw-text-primary;
+$lw-navbar-text-color: variables.$lw-text-primary;
 
 .lw-navbar-container {
   background-color: $lw-navbar-background;
@@ -43,7 +43,7 @@ $lw-navbar-text-color: $lw-text-primary;
     font-stretch: normal;
     font-style: normal;
     letter-spacing: 0.16px;
-    color: $lw-text-primary;
+    color: variables.$lw-text-primary;
     @media (max-width: 738px) {
       min-width: 0;
     }

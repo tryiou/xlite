@@ -1,11 +1,11 @@
-@import './variables';
+@use 'variables';
 
 $lw-icon-input-height: 50px;
 $lw-input-border-radius: 4px;
 
 .lw-icon-input-container {
 
-  $lw-input-bg: $lw-bg-6;
+  $lw-input-bg: variables.$lw-bg-6;
 
   background-color: $lw-input-bg;
   display: flex;
@@ -16,7 +16,7 @@ $lw-input-border-radius: 4px;
   line-height: $lw-icon-input-height;
   border-style: solid;
   border-width: 1px;
-  border-color: $lw-secondary-6;
+  border-color: variables.$lw-secondary-6;
   border-radius: $lw-input-border-radius;
 
   i {
@@ -29,7 +29,7 @@ $lw-input-border-radius: 4px;
 
   input {
     min-width: 10px;
-    color: $lw-text-primary;
+    color: variables.$lw-text-primary;
     background-color: $lw-input-bg;
     flex-grow: 1;
     height: $lw-icon-input-height - 2;

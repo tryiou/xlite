@@ -1,11 +1,12 @@
-@import './variables';
-@import './mixins';
+@use "sass:color";
+@use 'variables';
+@use 'mixins';
 
-$lw-sidebar-background: $lw-bg-5;
+$lw-sidebar-background: variables.$lw-bg-5;
 $lw-sidebar-line-color: transparent;
 $lw-sidebar-button-height: 50px;
 $lw-sidebar-left-border-width: 5px;
-$lw-sidebar-hover-color: darken($lw-sidebar-background, 5%);
+$lw-sidebar-hover-color: color.adjust($lw-sidebar-background, $lightness: -5%);
 
 .lw-sidebar-container {
 
@@ -24,7 +25,7 @@ $lw-sidebar-hover-color: darken($lw-sidebar-background, 5%);
   button.lw-sidebar-button {
     font-size: 16px;
     background-color: $lw-sidebar-background;
-    color: $lw-text-primary;
+    color: variables.$lw-text-primary;
     outline: 0;
     border: 0;
     box-shadow: none;
@@ -39,7 +40,7 @@ $lw-sidebar-hover-color: darken($lw-sidebar-background, 5%);
     user-select: none;
     border-radius: 0;
     padding-left: 20px;
-    @include default-hover-transition(background-color);
+    @include mixins.default-hover-transition(background-color);
 
     i {
       font-size: 18px;
@@ -57,14 +58,14 @@ $lw-sidebar-hover-color: darken($lw-sidebar-background, 5%);
       background-color: $lw-sidebar-hover-color;
       border-left-color: $lw-sidebar-hover-color;
       &.active {
-        border-left-color: $lw-nav-selected;
+        border-left-color: variables.$lw-nav-selected;
       }
     }
 
     &.active {
       border-left-width: $lw-sidebar-left-border-width;
       border-left-style: solid;
-      border-left-color: $lw-nav-selected;
+      border-left-color: variables.$lw-nav-selected;
     }
 
   }
@@ -115,7 +116,7 @@ $lw-sidebar-hover-color: darken($lw-sidebar-background, 5%);
 
 button.lw-sidebar-filterable-list-item {
 
-  $button-background: $lw-bg-6;
+  $button-background: variables.$lw-bg-6;
   //$button-width: 190px;
 
   display: block;
@@ -128,21 +129,21 @@ button.lw-sidebar-filterable-list-item {
   line-height: 48px;
   text-align: left;
   user-select: none;
-  color: $lw-text-primary;
-  @include default-hover-transition(background-color);
+  color: variables.$lw-text-primary;
+  @include mixins.default-hover-transition(background-color);
 
   &:last-child {
     margin-bottom: 0;
   }
 
   &:hover, &:active {
-    background-color: darken($button-background, 3%);
+    background-color: color.adjust($button-background, $lightness: -3%);
   }
 
   &:focus {
     background-color: $button-background;
     &:hover {
-      background-color: darken($button-background, 3%);
+      background-color: color.adjust($button-background, $lightness: -3%);
     }
   }
 
