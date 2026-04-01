@@ -62,8 +62,9 @@ describe('Transaction Builder Test Suite', function() {
     }
     builder.fundTransaction(defaultUtxos);
     builder.isValid().should.be.true();
-    builder.getTxOutputs().should.be.an.Object();
-    builder.getTxOutputs().should.have.properties(addresses);
+    builder.getTxOutputs().should.be.an.Array();
+    for (const addr of addresses)
+      builder.getTxOutputs().some(o => o.address === addr).should.be.true();
   });
   it('TransactionBuilder.getRecipients() TransactionBuilder.addRecipient()', function() {
     const builder = new TransactionBuilder(defaultFeeInfo);
