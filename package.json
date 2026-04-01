@@ -62,8 +62,8 @@
     "colors": "^1.4.0",
     "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",
-    "electron": "^36.2.1",
-    "electron-builder": "25.1.8",
+    "electron": "^39.8.5",
+    "electron-builder": "^26.8.1",
     "electron-mocha": "^13.1.0",
     "eslint": "^9.22.0",
     "eslint-plugin-react": "^7.37.4",
@@ -116,17 +116,18 @@
     "winston": "^3.17.0"
   },
   "build": {
+    "npmRebuild": false,
     "asarUnpack": [
       "**/bin/linux/xlite-daemon-linux64",
       "**/bin/mac/xlite-daemon-osx64",
       "**/bin/win/xlite-daemon-win64.exe",
       "**/blockchain-configuration-files/**/*"
     ],
-    "electronVersion": "36.2.1",
+    "electronVersion": "39.8.5",
     "appId": "co.blocknet.xlite",
     "productName": "XLite",
     "artifactName": "XLite-${version}-${os}.${ext}",
-    "copyright": "Copyright © 2020-2023 Blocknet",
+    "copyright": "Copyright © 2020-2026 Blocknet",
     "directories": {
       "app": "temp",
       "output": "dist-native"
@@ -191,13 +192,9 @@
         }
       ],
       "icon": "./src/static/images/linux/",
-      "synopsis": "Copyright © 2020-2023 Blocknet",
-      "description": "Copyright © 2020-2023 Blocknet",
+      "synopsis": "Copyright © 2020-2026 Blocknet",
+      "description": "Copyright © 2020-2026 Blocknet",
       "category": "Utility",
-      "desktop": {
-        "Name": "XLite",
-        "StartupWMClass": "xlite"
-      },
       "publish": {
         "provider": "github",
         "releaseType": "draft"
