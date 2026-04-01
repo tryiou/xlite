@@ -209,7 +209,14 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
 
     setProcessing(true);
 
-    const m = await cloudChains.createSPVWallet(password, preppedMnemonic);
+    let m;
+    try {
+      m = await cloudChains.createSPVWallet(password, preppedMnemonic);
+    } catch (err) {
+      setErrorMessage(err.message || Localize.text('There was a problem creating the wallet.', 'login'));
+      setProcessing(false);
+      return;
+    }
     if(!m) {
       setErrorMessage(Localize.text('There was a problem creating the wallet.', 'login'));
       setProcessing(false);
@@ -237,6 +244,12 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       setErrorMessage(Localize.text('Oops! There was a problem starting and unlocking the wallet.', 'login'));
       setProcessing(false);
       return;
+    }
+
+    if(preppedMnemonic) {
+      const addrSuccess = await cloudChains.setAllConfigAddressCounts();
+      if(!addrSuccess)
+        logger.error('There was a problem setting all address config counts');
     }
 
     setErrorMessage(''); // clear error on success

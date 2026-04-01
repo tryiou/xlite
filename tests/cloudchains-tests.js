@@ -215,7 +215,7 @@ describe('CloudChains Test Suite', function() {
     it('CloudChains.getCCMnemonic() CloudChains.getDecryptedMnemonic()', async function() {
       const cc = new CloudChains(ccFunc, storage);
       const fakeSpawn = new FakeSpawn();
-      cc._execFile = fakeSpawn.spawn;
+      cc._spawn = fakeSpawn.spawn;
       const password = 'my password';
       const mnemonic = 'my mnemonic';
       // Good cases should succeed
@@ -228,6 +228,8 @@ describe('CloudChains Test Suite', function() {
       });
       checkMnemonic.should.equal(mnemonic);
       const checkMnemonic2 = await new Promise((resolve, reject) => {
+        fakeSpawn.clear();
+        cc._spawn = fakeSpawn.spawn;
         cc.getDecryptedMnemonic(password)
           .then(resolve)
           .catch(reject);
@@ -237,6 +239,8 @@ describe('CloudChains Test Suite', function() {
       checkMnemonic2.should.equal(mnemonic);
       // Error on cli
       const checkMnemonicBad = await new Promise(resolve => {
+        fakeSpawn.clear();
+        cc._spawn = fakeSpawn.spawn;
         cc.getCCMnemonic(password)
           .then(resolve)
           .catch(resolve);
@@ -244,6 +248,8 @@ describe('CloudChains Test Suite', function() {
       });
       checkMnemonicBad.should.be.instanceof(Error);
       const checkMnemonicBad2 = await new Promise(resolve => {
+        fakeSpawn.clear();
+        cc._spawn = fakeSpawn.spawn;
         cc.getDecryptedMnemonic(password)
           .then(resolve)
           .catch(resolve);
@@ -252,6 +258,8 @@ describe('CloudChains Test Suite', function() {
       should.not.exist(checkMnemonicBad2); // expecting null
       // Empty mnemonic
       const checkEmptyMnemonicBad = await new Promise(resolve => {
+        fakeSpawn.clear();
+        cc._spawn = fakeSpawn.spawn;
         cc.getCCMnemonic(password)
           .then(resolve)
           .catch(resolve);
@@ -260,6 +268,8 @@ describe('CloudChains Test Suite', function() {
       });
       checkEmptyMnemonicBad.should.be.instanceof(Error);
       const checkEmptyMnemonicBad2 = await new Promise(resolve => {
+        fakeSpawn.clear();
+        cc._spawn = fakeSpawn.spawn;
         cc.getDecryptedMnemonic(password)
           .then(resolve)
           .catch(resolve);
@@ -353,20 +363,20 @@ describe('CloudChains Test Suite', function() {
           cc.enableAllWallets()
             .then(resolve)
             .catch(reject);
-          fakeSpawn.stderr('data', 'error');
+          fakeSpawn.stderr('data', 'critical error');
         });
         success.should.be.false();
       }
 
       {
-        // If the process closes
+        // If the process closes after stderr error
         fakeSpawn.clear();
         const success = await new Promise((resolve, reject) => {
           cc.enableAllWallets()
             .then(resolve)
             .catch(reject);
-          fakeSpawn.stdout('close', 0);
-          fakeSpawn.stderr('data', 'error'); // force close
+          fakeSpawn.stderr('data', 'error');
+          fakeSpawn.stdout('close', 1);
         });
         success.should.be.false();
       }
@@ -419,7 +429,7 @@ describe('CloudChains Test Suite', function() {
       cc._spawn = fakeSpawn.spawn;
       cc.saveWalletCredentials(password, salt).should.be.equal(true);
       {
-        // Should not change password on bad state (i.e. if skips stdin calls)
+        // Should not change password if success message arrives without password prompt
         fakeSpawn.clear();
         const newPassword = 'z';
         const success = await new Promise((resolve, reject) => {
@@ -431,15 +441,14 @@ describe('CloudChains Test Suite', function() {
         success.should.be.false();
       }
       {
-        // If the CLI successfully changes the password
+        // If the CLI successfully changes the password (one prompt for new password via stdin)
         fakeSpawn.clear();
         const newPassword = 'z';
         let success = await new Promise((resolve, reject) => {
           cc.changePassword(password, newPassword)
             .then(resolve)
             .catch(reject);
-          fakeSpawn.stdout('data', 'password:'); // current pw
-          fakeSpawn.stdout('data', 'password:'); // new pw
+          fakeSpawn.stdout('data', 'password:'); // new pw prompt
           fakeSpawn.stdout('data', 'password changed successfully');
         });
         success.should.be.true();
@@ -448,8 +457,7 @@ describe('CloudChains Test Suite', function() {
           cc.changePassword(password, newPassword)
             .then(resolve)
             .catch(reject);
-          fakeSpawn.stdout('data', 'password:'); // current pw
-          fakeSpawn.stdout('data', 'password:'); // new pw
+          fakeSpawn.stdout('data', 'password:'); // new pw prompt
           fakeSpawn.stdout('data', '[wallet] password changed successfully');
         });
         success.should.be.true();
@@ -470,21 +478,19 @@ describe('CloudChains Test Suite', function() {
         const newPassword = 'z';
         const success = await new Promise((resolve, reject) => {
           cc.changePassword(password, newPassword).then(resolve).catch(reject);
-          fakeSpawn.stdout('data', 'password:'); // current pw
-          fakeSpawn.stdout('data', 'password:'); // new pw
+          fakeSpawn.stdout('data', 'password:'); // new pw prompt
           fakeSpawn.stdout('data', 'Error(CHANGEPASSWORDFAILED)');
         });
         success.should.be.false();
         const spw = pbkdf2(password, salt);
         cc.getStoredPassword().should.be.equal(spw); // should match old
       }
-      { // Should not change password on incomplete state (missing new password)
+      { // Should not change password if password prompt never seen
         fakeSpawn.clear();
         const newPassword = 'c';
         const success = await new Promise((resolve, reject) => {
           cc.changePassword(password, newPassword).then(resolve).catch(reject);
-          fakeSpawn.stdout('data', 'password:'); // current pw
-          // missing new password request here
+          // no password prompt emitted
           fakeSpawn.stdout('data', 'password changed successfully');
         });
         success.should.be.false();
@@ -620,73 +626,59 @@ describe('CloudChains Test Suite', function() {
       const password = 'password';
 
       {
-        // If there is an error opening the CLI
         fakeSpawn.clear();
-        const success = await new Promise((resolve, reject) => {
-          cc.startSPV(password)
-            .then(resolve)
-            .catch(reject);
-          fakeSpawn.stderr('data', 'error')
-        });
+        const p = cc.startSPV(password);
+        await Promise.resolve(); // let microtask queue drain (spawn + handler registration)
+        fakeSpawn.stderr('data', 'critical error');
+        const success = await p.catch(() => false);
         success.should.be.false();
       }
 
       {
-        // If the process closes
         fakeSpawn.clear();
-        const success = await new Promise((resolve, reject) => {
-          cc.startSPV()
-            .then(resolve)
-            .catch(reject);
-          fakeSpawn.stdout('close', 0);
-          fakeSpawn.stderr('data', 'error'); // force close
-        });
+        const p = cc.startSPV();
+        await Promise.resolve(); // let microtask queue drain (spawn + handler registration)
+        fakeSpawn.stderr('data', 'error');
+        fakeSpawn.close(1);
+        const success = await p;
         success.should.be.false();
       }
 
       {
-        // Startup with no password should fail
         fakeSpawn.clear();
-        const success = await new Promise((resolve, reject) => {
-          cc.startSPV()
-            .then(resolve)
-            .catch(reject);
-          fakeSpawn.stdout('data', 'selection');
-        });
+        const p = cc.startSPV();
+        await Promise.resolve(); // let microtask queue drain (spawn + handler registration)
+        fakeSpawn.stdout('data', 'selection');
+        fakeSpawn.close(0);
+        const success = await p;
         success.should.be.false();
       }
 
       {
-        // If the CLI successfully starts up with a password
         fakeSpawn.clear();
-        const success = await new Promise((resolve, reject) => {
-          cc.startSPV(password)
-            .then(resolve)
-            .catch(reject);
-          fakeSpawn.stdout('data', 'Password:');
-          setTimeout(() => {
-            fakeSpawn.stdout('data', 'master rpc server');
-          }, 250);
-        });
+        const p = cc.startSPV(password);
+        await Promise.resolve(); // drain microtask queue — handlers registered
+        fakeSpawn.stdout('data', 'Password:');
+        setTimeout(() => {
+          fakeSpawn.stdout('data', 'master rpc server');
+        }, 250);
+        const success = await p;
         success.should.be.true();
       }
 
       {
-        // If the CLI successfully starts up while waiting for rpc
         fakeSpawn.clear();
         rpcHelp.ccHelp = async () => false;
-        const success = await new Promise((resolve, reject) => {
-          cc.startSPV(password)
-            .then(resolve)
-            .catch(reject);
-          fakeSpawn.stdout('data', 'Password:');
-          setTimeout(() => {
-            fakeSpawn.stdout('data', 'master rpc server');
-          }, 250);
-          setTimeout(() => {
-            rpcHelp.ccHelp = async () => true;
-          }, 500);
-        });
+        const p = cc.startSPV(password);
+        await Promise.resolve(); // drain microtask queue — handlers registered
+        fakeSpawn.stdout('data', 'Password:');
+        setTimeout(() => {
+          fakeSpawn.stdout('data', 'master rpc server');
+        }, 250);
+        setTimeout(() => {
+          rpcHelp.ccHelp = async () => true;
+        }, 500);
+        const success = await p;
         success.should.be.true();
       }
 
@@ -700,17 +692,17 @@ describe('CloudChains Test Suite', function() {
         cc2.isWalletRPCRunning = async () => false;
         cc2._execFile = fakeSpawn.spawn;
         cc2._spawn = fakeSpawn.spawn;
-        const success = await new Promise((resolve, reject) => {
-          cc2.startSPV(password).then(res => {
-            res.should.be.true();
-            cc2.isWalletRPCRunning = async () => true;
-            cc2.startSPV(password).then(resolve).catch(reject);
-          });
-          fakeSpawn.stdout('data', 'Password:');
-          setTimeout(() => {
-            fakeSpawn.stdout('data', 'master rpc server');
-          }, 250);
-        });
+        const p1 = cc2.startSPV(password);
+        await Promise.resolve(); // drain microtask queue — handlers registered
+        fakeSpawn.stdout('data', 'Password:');
+        setTimeout(() => {
+          fakeSpawn.stdout('data', 'master rpc server');
+        }, 250);
+        const res = await p1;
+        res.should.be.true();
+        cc2.isWalletRPCRunning = async () => true;
+        const p2 = cc2.startSPV(password);
+        const success = await p2;
         success.should.be.true();
       }
 
@@ -719,7 +711,7 @@ describe('CloudChains Test Suite', function() {
       const cc = new CloudChains(ccFunc, storage);
       cc.stopSPV.should.be.a.Function();
       // If there is no running CLI process
-      await cc.stopSPV().should.finally.be.false();
+      await cc.stopSPV().should.finally.be.true();
       // If there is a running CLI process
       const { execFile, wasKilled } = fakeExecFile();
       cc._cli = execFile('somepath', [], () => {});
@@ -754,6 +746,7 @@ describe('CloudChains Test Suite', function() {
               .then(resolve)
               .catch(reject);
             fakeSpawn.stderr('data', 'error');
+            fakeSpawn.close(1);
           });
         } catch (e) {
           err = e;
@@ -762,7 +755,7 @@ describe('CloudChains Test Suite', function() {
       }
 
       {
-        // If the wallet is not successfully created
+        // If the wallet is not successfully created (stderr then non-zero exit)
         fakeSpawn.clear();
         const cc = makecc();
         let err = null;
@@ -771,8 +764,8 @@ describe('CloudChains Test Suite', function() {
             cc.createSPVWallet(password, createFromMnemonic)
               .then(resolve)
               .catch(reject);
-            fakeSpawn.stdout('close', 0);
-            fakeSpawn.stderr('data', 'error'); // force close
+            fakeSpawn.stderr('data', 'some fatal error');
+            fakeSpawn.close(1);
           });
         } catch (e) {
           err = e;
@@ -788,13 +781,15 @@ describe('CloudChains Test Suite', function() {
           cc.createSPVWallet(password, createFromMnemonic)
             .then(resolve)
             .catch(reject);
-          fakeSpawn.stdout('data', 'Password:');
           setTimeout(() => {
             fakeSpawn.stdout('data', 'master rpc server');
           }, 250);
           setTimeout(() => {
-            fakeSpawn.stdout('data', testMnemonic);
-            fakeSpawn.stdout('close', 0);
+            fakeSpawn.close(0); // triggers createSPVWallet close → calls getCCMnemonic (spawns, registers handlers)
+            setTimeout(() => {
+              fakeSpawn.stdout('data', testMnemonic); // getCCMnemonic's stdout handler now exists
+              fakeSpawn.close(0); // triggers getCCMnemonic close → resolves with mnemonic
+            }, 50);
           }, 250);
         });
         res.should.equal(testMnemonic);
@@ -804,7 +799,6 @@ describe('CloudChains Test Suite', function() {
         fakeSpawn.clear();
         const cc = makecc();
         cc._rpc.ccHelp = async () => false;
-        cc._rpcStartExpirySeconds = 1;
         let err = null;
         await new Promise(resolve => {
           cc.createSPVWallet(password, createFromMnemonic)
@@ -814,7 +808,11 @@ describe('CloudChains Test Suite', function() {
               resolve();
             });
           fakeSpawn.stdout('data', 'master rpc server');
-          fakeSpawn.stdout('close', 0);
+          fakeSpawn.close(0); // triggers createSPVWallet close → calls getCCMnemonic (spawns, registers handlers)
+          (async () => {
+            await Promise.resolve(); // let getCCMnemonic's synchronous registration complete
+            fakeSpawn.close(0); // triggers getCCMnemonic close → rejects "failed to get the mnemonic"
+          })();
         });
         should.exist(err);
       }

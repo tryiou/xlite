@@ -8,6 +8,12 @@ import {logger} from './logger';
 import {storageKeys} from '../constants';
 import RPCController from './rpc-controller';
 import {unixTime} from '../../app/util';
+import {
+  DAEMON_EXIT,
+  DAEMON_STDOUT,
+  DAEMON_STDOUT_ERRORS,
+  DAEMON_STDERR_PATTERNS,
+} from './daemon-protocol';
 
 import _ from 'lodash';
 import electron from 'electron';
@@ -471,11 +477,17 @@ class CloudChains {
         } else
           resolve(mnemonic);
       };
-      const cli = this._execFile(this.getCCSPVFilePath(), ['--getmnemonic', password], {detached: false, windowsHide: true}, closeHandler);
+      const cli = this._spawn(this.getCCSPVFilePath(), ['--getmnemonic'],
+        {detached: false, windowsHide: true, env: this._getDaemonEnv(password)});
+      cli.stdin.end();
       cli.stdout.on('data', data => {
         mnemonic = data.toString('utf8');
       });
       cli.stdout.on('close', closeHandler);
+      cli.stderr.on('data', data => {
+        const str = data.toString('utf8');
+        logger.error(`getCCMnemonic error: ${str}`);
+      });
     });
   }
 
@@ -506,68 +518,117 @@ class CloudChains {
   }
 
   /**
-   * Starts the CloudChains CLI
+   * Starts the CloudChains CLI.
+   * Uses env-var-only credential passing (no stdin writes).
    * @param password {string}
    * @returns {Promise<boolean>}
    */
   startSPV(password = '') {
     return new Promise(resolve => {
-      this.isWalletRPCRunning().then(running => { // success if wallet already running
+      this.isWalletRPCRunning().then(running => {
         if (running) {
           logger.info('CloudChains wallet running');
           resolve(true);
           return;
         }
 
-      if (this.spvIsRunning()) { // first kill the prior process if rpc isn't working
-        this._cli.kill('SIGINT');
-        this._cli = null;
-      }
-
-      logger.info('Starting CloudChains daemon');
-
-      let started = false;
-      let waitForPasswd = true;
-      const args = password ? ['--password'] : [];
-      const cli = this._spawn(this.getCCSPVFilePath(), args, {detached: false, windowsHide: true});
-      cli.stdin.setEncoding('utf-8');
-      cli.stdout.on('data', data => {
-        if (started)
-          return;
-        const str = data.toString('utf8');
-        if (waitForPasswd && /^password:/i.test(str)) {
-          waitForPasswd = false;
-          cli.stdin.write(password + '\r\n');
-        } else if (
-          (this._badPasswordPatt.test(str))
-          || (!password && this._selectionPatt.test(str))
-        ) {
-          started = true;
-          resolve(false);
-          cli.kill('SIGINT');
-        } else if(/master\sRPC\sserver/i.test(str)) {
-          started = true;
-          // give the master RPC server a second to start
-          const expiry = unixTime() + this._rpcStartExpirySeconds;
-          this._waitForRpc(expiry, this._rpcWaitDelay).then(available => resolve(available && !waitForPasswd))
-            .catch(() => resolve(false));
+        if (this.spvIsRunning()) {
+          this._cli.kill('SIGINT');
+          this._cli = null;
         }
-      });
-      cli.stderr.on('data', data => {
-        const str = data.toString('utf8');
-        logger.error(`startSPV error: ${str}`);
-        if (started)
-          return;
-        started = true;
-        resolve(false);
-        cli.kill('SIGINT');
-      });
-      cli.stdout.on('close', code => {
-        logger.info(`startSPV child process exited with code ${!code ? '0' : code}`);
-      });
 
-      // Watch process
-      this._cli = cli;
+        logger.info('Starting CloudChains daemon');
+
+        let settled = false;
+        const settle = (value) => {
+          if (settled) return;
+          settled = true;
+          resolve(value);
+        };
+
+        const args = password ? ['--password'] : [];
+        let cli;
+        try {
+          cli = this._spawn(
+            this.getCCSPVFilePath(),
+            args,
+            {
+              detached: false,
+              windowsHide: true,
+              env: this._getDaemonEnv(password),
+            }
+          );
+        } catch (err) {
+          logger.error(`startSPV spawn error: ${err.message}`);
+          settle(false);
+          return;
+        }
+
+        let sawBadPassword = false;
+        let sawSelection = false;
+
+        cli.stdout.on('data', (data) => {
+          try {
+            if (settled) return;
+            const str = data.toString('utf8');
+
+            if (this._badPasswordPatt.test(str)) {
+              sawBadPassword = true;
+            } else if (this._selectionPatt.test(str)) {
+              sawSelection = true;
+            } else if (DAEMON_STDOUT.RPC_SERVER_READY.test(str)) {
+              const expiry = unixTime() + this._rpcStartExpirySeconds;
+              this._waitForRpc(expiry, this._rpcWaitDelay)
+                .then((available) => settle(available))
+                .catch(() => settle(false));
+            }
+          } catch(e) { logger.error(`startSPV stdout handler error: ${e.message}`); }
+        });
+
+        // Daemon writes all output to stdout via ConsoleHandler; stderr means JVM error
+        try {
+          cli.stderr.on('data', (data) => {
+            try {
+              if (settled) return;
+              const str = data.toString('utf8');
+              logger.error(`startSPV stderr: ${str}`);
+
+              const isFatal = DAEMON_STDERR_PATTERNS.FATAL.some(p => p.test(str));
+              if (isFatal) {
+                settle(false);
+              }
+            } catch(e) { logger.error(`startSPV stderr handler error: ${e.message}`); }
+          });
+        } catch(e) {
+          logger.error(`startSPV stderr registration error: ${e.message}`);
+        }
+
+        cli.stdout.on('close', () => {
+          if (settled) return;
+          clearTimeout(timeout);
+          this._cli = null;
+          const code = cli.exitCode;
+          logger.info(`startSPV daemon exited with code ${code}`);
+          if (sawBadPassword || (!password && sawSelection)) {
+            settle(false);
+          } else if (code === DAEMON_EXIT.SUCCESS) {
+            this.isWalletRPCRunning()
+              .then((running) => settle(running))
+              .catch(() => settle(false));
+          } else {
+            settle(false);
+          }
+        });
+
+        // Timeout safety net
+        const timeout = setTimeout(() => {
+          if (!settled) {
+            cli.kill('SIGINT');
+            settle(false);
+          }
+        }, this._rpcStartExpirySeconds * 1000 * 3);
+
+        this._cli = cli;
       });
     });
   }
@@ -577,6 +638,11 @@ class CloudChains {
    * @returns {Promise<boolean>}
    */
   async stopSPV() {
+    // If no CLI reference or the process has already exited, nothing to stop
+    if (!this._cli || _.isNumber(this._cli.exitCode)) {
+      this._cli = null;
+      return true;
+    }
     let r = false;
     if (await this.isWalletRPCRunning())
       r = await this._rpc.ccStop();
@@ -588,120 +654,150 @@ class CloudChains {
   }
 
   /**
-   * Creates a new CloudChains wallet
+   * Creates a new CloudChains wallet.
+   * Uses env-var-only credential passing (no stdin writes).
+   * Resolves with mnemonic string on success, rejects with descriptive Error on failure.
    * @param password {string}
    * @param mnemonic {string}
    * @returns {Promise<string>}
    */
   createSPVWallet(password, mnemonic = '') {
     return new Promise((resolve, reject) => {
-      if (!password) { // fail on bad password
+      // --- Pre-flight checks ---
+      if (!password) {
         reject(new Error('failed to create wallet with empty password'));
         return;
       }
 
-      if (this.spvIsRunning()) { // stop existing if running
+      // Kill existing process if running
+      if (this.spvIsRunning()) {
         this._cli.kill('SIGINT');
         this._cli = null;
       }
 
-      // Check if key file already exists and if so move to backup folder
-      // Only move to backup if creating wallet with mnemonic
-      if(this.isInstalled()) {
+      // Move existing key file to backup before creating new wallet
+      if (this.isInstalled()) {
         const keyPath = this.getKeyPath();
         const keyExt = path.extname(keyPath);
         const keyName = path.basename(keyPath, keyExt);
-        const backupFilePath = path.join(this.getBackupDir(), `${keyName}_${moment().format('YYYYMMDDHHmmss')}${keyExt}`);
+        const backupFilePath = path.join(
+          this.getBackupDir(),
+          `${keyName}_${moment().format('YYYYMMDDHHmmss')}${keyExt}`
+        );
         try {
-          fs.moveSync(keyPath, backupFilePath, {overwrite: true});
-        } catch(err) {
+          fs.moveSync(keyPath, backupFilePath, { overwrite: true });
+        } catch (err) {
           logger.error(`Move key file failed with error: ${err.message}`);
         }
       }
 
-      const resolveMnemonic = () => {
-        this.getCCMnemonic(password)
-          .then(resolve)
-          .catch(reject);
+      logger.info('Creating SPV wallet via daemon');
+
+      // --- Build args ---
+      const args = mnemonic
+        ? ['--xliterpc', '--createwalletmnemonic']
+        : ['--xliterpc', '--createdefaultwallet'];
+
+      // --- State tracking ---
+      let settled = false;
+      const stderrChunks = [];
+
+      const settle = (result, isReject = false) => {
+        if (settled) return;
+        settled = true;
+        if (isReject) reject(result);
+        else resolve(result);
       };
 
-      const createHandler = async err => {
-        if (err) {
-          reject(err);
-        } else {
-          if(mnemonic) {
-            // If it is a restore from mnemonic, up the address counts in the configs
-            const success = await this.setAllConfigAddressCounts();
-            if(!success)
-              logger.error('There was a problem setting all address config counts');
+      // --- Spawn daemon ---
+      let cli;
+      try {
+        cli = this._spawn(
+          this.getCCSPVFilePath(),
+          args,
+          {
+            detached: false,
+            windowsHide: true,
+            env: this._getDaemonEnv(password, mnemonic),
           }
-          resolveMnemonic();
-        }
-      };
-
-      let started = false;
-      let args;
-      if(mnemonic) { // Create a wallet from a previous mnemonic
-        args = ['--xliterpc', '--createwalletmnemonic'];
-      } else { // Create a new wallet
-        args = ['--xliterpc', '--createdefaultwallet'];
+        );
+      } catch (err) {
+        logger.error(`createSPVWallet spawn error: ${err.message}`);
+        settle(new Error(`failed to spawn daemon: ${err.message}`), true);
+        return;
       }
 
-      // cloudchains daemon supports reading password/mnemonic from stdin. We
-      // are expecting the daemon to return feedback (bad password/mnemonic).
-      // The mnemonic is optional and as a result is tracked in the state.
-      // If passwd and mnemonic then perform mnemonic submission else perform
-      // only password submission.
-      let waitForPasswd = true;
-      let waitForMnem = true;
-
-      const cli = this._spawn(this.getCCSPVFilePath(), args, {detached: false, windowsHide: true});
-      cli.stdin.setEncoding('utf-8');
-      cli.stdout.on('data', data => {
-        if (started)
-          return;
-
+      // --- Stdout handler (pattern detection only) ---
+      let sawBadPassword = false;
+      let sawBadMnemonic = false;
+      cli.stdout.on('data', (data) => {
+        if (settled) return;
         const str = data.toString('utf8');
-        if (waitForPasswd && /^password:/i.test(str)) { // write password
-          waitForPasswd = false;
-          cli.stdin.write(password + '\r\n');
-        } else if ((!waitForPasswd || !waitForMnem) && this._badPasswordPatt.test(str)) { // check for bad password
-          started = true;
-          resolve(false);
-          cli.kill('SIGINT');
-        } else if (mnemonic && waitForMnem && !waitForPasswd && /^mnemonic:/i.test(str)) { // Optionally write mnemonic
-          waitForMnem = false;
-          cli.stdin.write(mnemonic + '\r\n');
-        } else {
-          started = true;
-          const expiry = unixTime() + this._rpcStartExpirySeconds; // Wait rpc server is ready until this time
-          this._waitForRpc(expiry, this._rpcWaitDelay)
-            .then(available => {
-              if (available && !waitForPasswd)
-                createHandler();
-              else {
-                createHandler(new Error('failed to start rpc server'));
-                cli.kill('SIGINT');
-              }
-            })
-            .catch(() => {
-              createHandler(new Error('failed to start rpc server'));
-              cli.kill('SIGINT');
-            });
+
+        if (DAEMON_STDOUT_ERRORS.BADPASSWORD.test(str)) {
+          sawBadPassword = true;
+        } else if (DAEMON_STDOUT_ERRORS.BADMNEMONIC.test(str)) {
+          sawBadMnemonic = true;
         }
       });
-      cli.stderr.on('data', data => {
+
+      // --- Stderr handler (collect content, decide at close) ---
+      cli.stderr.on('data', (data) => {
         const str = data.toString('utf8');
-        logger.error(str);
-        if (started)
+        stderrChunks.push(str);
+        logger.error(`createSPVWallet stderr: ${str}`);
+      });
+
+      // --- Close handler (primary resolution via exit code) ---
+      cli.stdout.on('close', () => {
+        if (settled) return;
+        clearTimeout(timeout);
+        this._cli = null;
+        const code = cli.exitCode;
+
+        logger.info(`createSPVWallet daemon exited with code ${code}`);
+
+        // Check stdout-detected errors first
+        if (sawBadPassword) {
+          settle(new Error('password does not meet strength requirements'), true);
           return;
-        started = true;
-        createHandler(new Error('failed to create a new wallet'));
+        }
+        if (sawBadMnemonic) {
+          settle(new Error('invalid or corrupted mnemonic phrase'), true);
+          return;
+        }
+
+        // Exit code 0: daemon succeeded, fetch the mnemonic
+        if (code === DAEMON_EXIT.SUCCESS) {
+          this.getCCMnemonic(password)
+            .then((m) => settle(m))
+            .catch((err) => settle(err, true));
+          return;
+        }
+
+        // Non-zero exit: parse stderr for diagnosis
+        const fullStderr = stderrChunks.join('\n').trim();
+        const fatalMatch = DAEMON_STDERR_PATTERNS.FATAL.find((p) =>
+          p.test(fullStderr)
+        );
+        if (fatalMatch) {
+          settle(new Error(`daemon fatal error: ${fullStderr || 'unknown'}`), true);
+        } else {
+          settle(
+            new Error(
+              `failed to create wallet (exit ${code}): ${fullStderr || 'unknown error'}`
+            ),
+            true
+          );
+        }
+      });
+
+      // --- Timeout safety net ---
+      const timeoutMs = this._rpcStartExpirySeconds * 1000 * 3; // 90 seconds
+      const timeout = setTimeout(() => {
         cli.kill('SIGINT');
-      });
-      cli.stdout.on('close', code => {
-        logger.info(`child process exited with code ${!code ? '0' : code}`);
-      });
+        settle(new Error('wallet creation timed out'), true);
+      }, timeoutMs);
 
       // Watch this process
       this._cli = cli;
@@ -709,35 +805,70 @@ class CloudChains {
   }
 
   /**
-   * Enables all wallets using the CloudChains CLI param --enablerpcandconfigure
+   * Enables all wallets using the CloudChains CLI param --enablerpcandconfigure.
    * @returns {Promise<boolean>}
    */
   enableAllWallets() {
     return new Promise(resolve => {
-      let started = false;
-      const cli = this._spawn(this.getCCSPVFilePath(), ['--xliterpc', '--enablerpcandconfigure'], {detached: false, windowsHide: true});
-      cli.stdout.on('data', data => {
+      let settled = false;
+      let sawStdout = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      let cli;
+      try {
+        cli = this._spawn(
+          this.getCCSPVFilePath(),
+          ['--xliterpc', '--enablerpcandconfigure'],
+          { detached: false, windowsHide: true }
+        );
+      } catch (err) {
+        logger.error(`enableAllWallets spawn error: ${err.message}`);
+        settle(false);
+        return;
+      }
+
+      cli.stdout.on('data', (data) => {
+        if (settled) return;
         const str = data.toString('utf8');
-        if(this._selectionPatt.test(str)) { // kill process when selection screen appears
-          if (started)
-            return;
-          started = true;
-          resolve(true);
+        if (this._selectionPatt.test(str)) {
+          sawStdout = true;
+          settle(true);
           cli.kill('SIGINT');
         }
       });
-      cli.stderr.on('data', data => {
+
+      // Only settle on fatal stderr
+      cli.stderr.on('data', (data) => {
+        if (settled) return;
         const str = data.toString('utf8');
-        logger.error('enableAllWallets', str);
-        if (started)
-          return;
-        started = true;
-        resolve(false);
-        cli.kill('SIGINT');
+        logger.error(`enableAllWallets stderr: ${str}`);
+
+        const isFatal = DAEMON_STDERR_PATTERNS.FATAL.some(p => p.test(str));
+        if (!sawStdout && isFatal) {
+          settle(false);
+        }
       });
-      cli.stdout.on('close', code => {
-        logger.info(`enableAllWallets child process exited with code ${!code ? '0' : code}`);
+
+      cli.stdout.on('close', () => {
+        if (!settled) {
+          clearTimeout(timeout);
+          const code = cli.exitCode;
+          logger.info(`enableAllWallets daemon exited with code ${code}`);
+          settle(code === DAEMON_EXIT.SUCCESS);
+        }
       });
+
+      // Timeout safety net
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          cli.kill('SIGINT');
+          settle(false);
+        }
+      }, this._rpcStartExpirySeconds * 1000);
     });
   }
 
@@ -776,53 +907,80 @@ class CloudChains {
   }
 
   /**
-   * Change the wallet password using the CloudChains CLI param --changepassword
+   * Change the wallet password using the CloudChains CLI param --changepassword.
+   * Current password is passed via env var. New password is sent via stdin
+   * when the daemon prompts for it on stdout.
    * @param oldpw {string} Old password
    * @param newpw {string} New password
    * @returns {Promise<boolean>}
    */
   changePassword(oldpw, newpw) {
     return new Promise(resolve => {
-      let exiting = false;
-      let waitForPasswd = true;
-      let waitForNewPasswd = true;
-      const cli = this._spawn(this.getCCSPVFilePath(), ['--changepassword'], {detached: false, windowsHide: true});
+      let settled = false;
+      let sawPasswordPrompt = false;
+
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        resolve(value);
+      };
+
+      let cli;
+      try {
+        cli = this._spawn(
+          this.getCCSPVFilePath(),
+          ['--changepassword'],
+          { detached: false, windowsHide: true, env: this._getDaemonEnv(oldpw) }
+        );
+      } catch (err) {
+        logger.error(`changePassword spawn error: ${err.message}`);
+        settle(false);
+        return;
+      }
+
       cli.stdin.setEncoding('utf-8');
-      cli.stdout.on('data', data => {
-        if (exiting)
-          return;
+
+      cli.stdout.on('data', (data) => {
+        if (settled) return;
         const str = data.toString('utf8');
-        if (/password changed successfully/i.test(str)) {
-          exiting = true;
-          const changed = !waitForPasswd && !waitForNewPasswd;
-          if (changed)
-            this.saveWalletCredentials(newpw, null);
-          resolve(changed);
+
+        if (DAEMON_STDOUT.PASSWORD_CHANGED.test(str)) {
+          if (sawPasswordPrompt) this.saveWalletCredentials(newpw, null);
+          settle(sawPasswordPrompt);
           cli.kill('SIGINT');
-        } else if (/CHANGEPASSWORDFAILED/i.test(str)) {
-          exiting = true;
-          resolve(false);
+        } else if (DAEMON_STDOUT_ERRORS.CHANGEPASSWORDFAILED.test(str)) {
+          settle(false);
           cli.kill('SIGINT');
-        } else if (/^password:/i.test(str) && waitForPasswd && waitForNewPasswd) { // current password
-          waitForPasswd = false;
-          cli.stdin.write(oldpw + '\r\n');
-        } else if (/^password:/i.test(str) && !waitForPasswd && waitForNewPasswd) { // new password
-          waitForNewPasswd = false;
+        } else if (DAEMON_STDOUT.PASSWORD_PROMPT.test(str) && !sawPasswordPrompt) {
+          // Daemon prompts for new password on stdin (current password comes from env var)
+          sawPasswordPrompt = true;
           cli.stdin.write(newpw + '\r\n');
         }
       });
-      cli.stderr.on('data', data => {
-        const str = data.toString('utf8');
-        logger.error('changepassword', str);
-        if (exiting)
-          return;
-        exiting = true;
-        resolve(false);
-        cli.kill('SIGINT');
+
+      // Daemon writes all output to stdout; stderr means JVM error
+      cli.stderr.on('data', (data) => {
+        if (settled) return;
+        logger.error(`changePassword stderr: ${data.toString('utf8')}`);
+        settle(false);
       });
-      cli.stdout.on('close', code => {
-        logger.info(`changepassword child process exited with code ${!code ? '0' : code}`);
+
+      cli.stdout.on('close', () => {
+        if (!settled) {
+          clearTimeout(timeout);
+          const code = cli.exitCode;
+          logger.info(`changePassword daemon exited with code ${code}`);
+          settle(false);
+        }
       });
+
+      // Timeout
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          cli.kill('SIGINT');
+          settle(false);
+        }
+      }, this._rpcStartExpirySeconds * 1000);
     });
   }
 
@@ -904,6 +1062,22 @@ class CloudChains {
           this._waitForRpc(expiry, wait).then(res => resolve(res));
         }, wait);
       });
+  }
+
+  /**
+   * Build an env object for spawning the daemon process.
+   * Merges the current process env with WALLET_PASSWORD and WALLET_MNEMONIC.
+   * Only sets env vars when values are non-empty strings.
+   * @param password {string|null}
+   * @param mnemonic {string|null}
+   * @returns {Object}
+   * @private
+   */
+  _getDaemonEnv(password = null, mnemonic = null) {
+    const env = { ...process.env };
+    if (password && password.length > 0) env.WALLET_PASSWORD = password;
+    if (mnemonic && mnemonic.length > 0) env.WALLET_MNEMONIC = mnemonic;
+    return env;
   }
 }
 

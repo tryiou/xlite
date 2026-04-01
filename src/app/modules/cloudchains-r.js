@@ -246,19 +246,18 @@ class CloudChains {
   }
 
   /**
-   * Creates a new CloudChains wallet
+   * Creates a new CloudChains wallet.
+   * Propagates errors to caller for UI display.
    * @param password {string}
    * @param mnemonic {string}
-   * @returns {string}
+   * @returns {Promise<string>} mnemonic on success
+   * @throws {Error} on failure with descriptive message
    */
   async createSPVWallet(password, mnemonic = '') {
-    try {
-      if (password)
-        await this._clearWalletStorage();
-      return await this._api.cloudChains_createSPVWallet(password, mnemonic);
-    } catch (e) {
-      return '';
-    }
+    if (password)
+      await this._clearWalletStorage();
+    // Let errors propagate - caller needs to know WHY it failed
+    return await this._api.cloudChains_createSPVWallet(password, mnemonic);
   }
 
   /**
@@ -313,6 +312,19 @@ class CloudChains {
   async isNewInstall() {
     try {
       return await this._api.cloudChains_isNewInstall();
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Sets the addressCount of all wallet config files and reloads configs via RPC.
+   * @param addressCount {number} The number of addresses to check for UTXOs and Transactions
+   * @returns {Promise<boolean>}
+   */
+  async setAllConfigAddressCounts(addressCount) {
+    try {
+      return await this._api.cloudChains_setAllConfigAddressCounts(addressCount);
     } catch (e) {
       return false;
     }

@@ -369,6 +369,8 @@ class Api {
     this._proc.handle(apiConstants.cloudChains_createSPVWallet, (evt, password, mnemonic) => {
       if (password)
         this._clearWalletStorage();
+      if (this._cloudChains.isInstalled() && !mnemonic)
+        logger.info('Wallet file exists before createSPVWallet - will be backed up');
       return this._cloudChains.createSPVWallet(password, mnemonic);
     });
     this._proc.handle(apiConstants.cloudChains_enableAllWallets, (evt, arg) => {
@@ -382,6 +384,9 @@ class Api {
     });
     this._proc.handle(apiConstants.cloudChains_isNewInstall, (evt, arg) => {
       return this._cloudChains.isNewInstall();
+    });
+    this._proc.handle(apiConstants.cloudChains_setAllConfigAddressCounts, (evt, addressCount) => {
+      return this._cloudChains.setAllConfigAddressCounts(addressCount);
     });
   }
 

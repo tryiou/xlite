@@ -63,21 +63,23 @@ export class FakeSpawn {
   stdoutCallbacks = {};
   stderrCallbacks = {};
   killed = false;
+  _spawnedProcess = null;
 
   spawn = () => {
+    const self = this;
     const stdoutOn = (function(eventName, func) {
-      if (!this.stdoutCallbacks[eventName])
-        this.stdoutCallbacks[eventName] = [];
+      if (!self.stdoutCallbacks[eventName])
+        self.stdoutCallbacks[eventName] = [];
       if (func)
-        this.stdoutCallbacks[eventName].push(func);
+        self.stdoutCallbacks[eventName].push(func);
     }).bind(this);
     const stderrOn = (function(eventName, func) {
-      if (!this.stderrCallbacks[eventName])
-        this.stderrCallbacks[eventName] = [];
+      if (!self.stderrCallbacks[eventName])
+        self.stderrCallbacks[eventName] = [];
       if (func)
-        this.stderrCallbacks[eventName].push(func);
+        self.stderrCallbacks[eventName].push(func);
     }).bind(this);
-    return {
+    this._spawnedProcess = {
       // properties used by the CC CLI methods
       stdout: {
         on: stdoutOn
@@ -87,39 +89,59 @@ export class FakeSpawn {
       },
       stdin: {
         write() {},
-        setEncoding() {}
+        setEncoding() {},
+        end() {}
       },
       kill: () => {
         this.killed = true;
       },
       exitCode: null
     };
+    return this._spawnedProcess;
   }
 
-  stdout(name, data = '', wait = 0) {
-    setTimeout(() => {
-      const cbs = this.stdoutCallbacks[name];
-      if (cbs) {
-        for (const cb of cbs)
-          cb(data);
-      }
-    }, wait);
+  // Trigger stdout close handlers with an exit code.
+  // Sets exitCode on the spawned process (matching real Node.js behavior
+  // where cli.exitCode is available after stdout 'close' fires).
+  // Snapshots handlers before iterating so newly-registered handlers
+  // (e.g. from getCCMnemonic called inside a close handler) don't fire
+  // in the same iteration.
+  close(code = 0) {
+    if (this._spawnedProcess)
+      this._spawnedProcess.exitCode = code;
+    const cbs = this.stdoutCallbacks['close'];
+    if (cbs) {
+      const snapshot = [...cbs];
+      for (const cb of snapshot)
+        cb();
+    }
   }
 
-  stderr(name, data = '', wait = 0) {
-    setTimeout(() => {
-      const cbs = this.stderrCallbacks[name];
-      if (cbs) {
-        for (const cb of cbs)
-          cb(data);
-      }
-    }, wait);
+  stdout(name, data = '') {
+    const cbs = this.stdoutCallbacks[name];
+    if (cbs) {
+      for (const cb of cbs)
+        cb(data);
+    }
   }
 
+  stderr(name, data = '') {
+    const cbs = this.stderrCallbacks[name];
+    if (cbs) {
+      for (const cb of cbs)
+        cb(data);
+    }
+  }
+
+  // Clear callbacks and state in-place (don't replace objects,
+  // because the spawn arrow function captured references to them).
   clear() {
-    this.stdoutCallbacks = {};
-    this.stderrCallbacks = {};
+    for (const key of Object.keys(this.stdoutCallbacks))
+      delete this.stdoutCallbacks[key];
+    for (const key of Object.keys(this.stderrCallbacks))
+      delete this.stderrCallbacks[key];
     this.killed = false;
+    this._spawnedProcess = null;
   }
 }
 
