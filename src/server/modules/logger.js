@@ -11,7 +11,9 @@ const isDev = process.env.ELECTRON_IS_DEV === 'true';
 export const logger = createLogger({
   format: format.combine(
     format.timestamp(),
-    format.simple(),
+    format.printf(({ timestamp, level, message }) => {
+      return `${timestamp} ${level}: ${message}`;
+    }),
   ),
   transports: [
     new transports.File({
