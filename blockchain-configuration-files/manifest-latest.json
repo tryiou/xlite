@@ -204,5 +204,21 @@
     ],
     "xbridge_conf": "unobtanium--v0.11.0.conf",
     "wallet_conf": "unobtanium--v0.11.0.conf"
+  },
+  {
+    "blockchain": "Pocketcoin",
+    "ticker": "PKOIN",
+    "ver_id": "pkoin--v0.22.13",
+    "ver_name": "Pocketcoin",
+    "conf_name": "pocketcoin.conf",
+    "dir_name_linux": "pocketcoin",
+    "dir_name_mac": "Pocketcoin",
+    "dir_name_win": "Pocketcoin",
+    "repo_url": "https://github.com/pocketnetteam/pocketnet.core",
+    "versions": [
+      "v0.22.13"
+    ],
+    "xbridge_conf": "pkoin--0.22.13.conf",
+    "wallet_conf": "pkoin--0.22.13.conf"
   }
 ]

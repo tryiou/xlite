@@ -82,5 +82,12 @@
     "website": "https://www.unobtanium.uno/",
     "explorer": "https://chainz.cryptoid.info/uno/",
     "explorerTx": "https://chainz.cryptoid.info/uno/tx.dws?{{tx}}.htm"
+  },
+  {
+    "ticker": "PKOIN",
+    "name": "Pocketcoin",
+    "website": "https://pocketnet.app/",
+    "explorer": "https://explorer.pocketnet.app/",
+    "explorerTx": "https://explorer.pocketnet.app/block/{{tx}}"
   }
 ]
