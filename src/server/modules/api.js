@@ -204,8 +204,9 @@ class Api {
       if (_.has(screenSize, 'width') && _.has(screenSize, 'height'))
         this._storage.setItem(storageKeys.SCREEN_SIZE, screenSize);
     });
-    this._proc.on(apiConstants.general_requestClose, async (evt, reason) => {
-      logger.error(reason);
+    this._proc.on(apiConstants.general_requestClose, async (evt, data) => {
+      const { reason, level = 'error' } = typeof data === 'object' ? data : { reason: data };
+      (level === 'info' ? logger.info : logger.error)(reason);
       await this._shutdown.shutdown();
       this._app.quit();
     });

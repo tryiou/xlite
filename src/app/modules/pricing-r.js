@@ -1,10 +1,10 @@
 // Copyright (c) 2020 The Blocknet developers
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
-import {localStorageKeys} from '../constants';
-import {logger} from './logger-r';
+import { localStorageKeys } from '../constants';
+import { logger } from './logger-r';
 import PriceData from '../types/pricedata';
-import {unixTime} from '../util';
+import { unixTime } from '../util';
 
 import _ from 'lodash';
 
@@ -56,7 +56,7 @@ export default class Pricing {
       if (!_.isArray(priceData) || priceData.length === 0)
         return latestData; // last known data on error
     } catch (e) {
-      logger.error(`failed to fetch pricing data for ${ticker}/${currency}`);
+      logger.debug(`failed to fetch pricing data for ${ticker}/${currency}`);
       return latestData; // last known data on error
     }
 
@@ -82,7 +82,7 @@ export default class Pricing {
       return 0;
     // sort descending
     const sorted = latestData.map(pd => new PriceData(pd))
-      .sort((a,b) => b.unix() - a.unix());
+      .sort((a, b) => b.unix() - a.unix());
     // the first item in latestData is data from the last 24 hours relative to now
     const day = sorted[0];
     return (day.close - day.open) / day.open;
@@ -100,7 +100,7 @@ export default class Pricing {
       return 0;
     // sort descending and compare first two entries (last 2 days)
     const sorted = latestData.map(pd => new PriceData(pd))
-      .sort((a,b) => b.unix() - a.unix());
+      .sort((a, b) => b.unix() - a.unix());
     return sorted[0].volume;
   }
 

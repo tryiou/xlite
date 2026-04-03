@@ -96,7 +96,7 @@ api.general_onShutdown(() => {
   Alert.message(Localize.text('Shutdown', 'shutdown'),
     Localize.text('Wallet is shutting down, please wait...', 'shutdown'));
   timeout(1000).then(() => {
-    api.general_requestClose();
+    api.general_requestClose({ reason: 'user closed window', level: 'info' });
   });
 });
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The Blocknet developers
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
-import {logger} from './logger';
+import { logger } from './logger';
 import PriceData from '../../app/types/pricedata';
 
 import _ from 'lodash';
@@ -42,9 +42,9 @@ export default class Pricing {
     { // data from the last twenty-four hours
       const { statusCode, body = {} } = res[0];
       const { RAW = {} } = body;
-      if(statusCode !== 200) {
+      if (statusCode !== 200) {
         logger.error(`fetch current pricing data call for ${ticker}/${currency} failed with statusCode ${statusCode}`);
-      } else if(_.has(RAW, ticker) && _.has(RAW[ticker], currency)) {
+      } else if (_.has(RAW, ticker) && _.has(RAW[ticker], currency)) {
         const day = RAW[ticker][currency];
         pricingArr = pricingArr.concat([new PriceData({
           date: new Date(day['LASTUPDATE'] * 1000).toISOString(),
@@ -68,14 +68,14 @@ export default class Pricing {
       const reqField = 'Data';
       if (!_.has(body, dataKey) || !_.has(body[dataKey], reqField) || !_.has(body[dataKey][reqField], reqField)) {
         logger.error(`fetch historical pricing data call for ${ticker}/${currency} failed: missing data`);
-      } else if(statusCode !== 200) {
+      } else if (statusCode !== 200) {
         logger.error(`fetch historical pricing data call for ${ticker}/${currency} failed with statusCode ${statusCode}`);
-      } else if(Response === 'Error') {
+      } else if (Response === 'Error') {
         logger.error(`fetch historical pricing data for ${ticker}/${currency} failed with error message '${Message}'`);
       } else {
         const results = body[dataKey][reqField][reqField];
         const m = new Map();
-        const expectedKeys = ['open','close','high','low','volumefrom'];
+        const expectedKeys = ['open', 'close', 'high', 'low', 'volumefrom'];
         for (const day of results) {
           let stop = false;
           for (const key of expectedKeys) {
@@ -125,7 +125,7 @@ export default class Pricing {
     try {
       priceData = await this._req(ticker, currency);
     } catch (e) {
-      logger.error(`failed to fetch pricing data for ${ticker}/${currency}`);
+      logger.debug(`failed to fetch pricing data for ${ticker}/${currency}`);
       return null;
     }
 
