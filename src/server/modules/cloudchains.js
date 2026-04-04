@@ -853,10 +853,9 @@ class CloudChains {
         }
       });
 
-      cli.stdout.on('close', () => {
+      cli.on('exit', (code) => {
         if (!settled) {
           clearTimeout(timeout);
-          const code = cli.exitCode;
           logger.info(`enableAllWallets daemon exited with code ${code}`);
           settle(code === DAEMON_EXIT.SUCCESS);
         }
