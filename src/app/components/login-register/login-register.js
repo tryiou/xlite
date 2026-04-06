@@ -3,28 +3,28 @@
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 import Localize from '../shared/localize';
 import IconArrowRight from '../shared/icon-arrow-right';
-import {logger} from '../../modules/logger-r';
+import { logger } from '../../modules/logger-r';
 import Logo from '../shared/logo';
 import CloudChains from '../../modules/cloudchains-r';
 import { Button } from '../shared/buttons';
-import {pbkdf2} from '../../modules/crypt';
+import { pbkdf2 } from '../../modules/crypt';
 import Spinner from '../shared/spinner';
 
 import _ from 'lodash';
 import PropTypes from 'prop-types';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LoginInput } from '../shared/inputs';
 import { checkPassword, timeout } from '../../util';
 import Alert from '../../modules/alert';
 import ContextMenu from '../../modules/context-menu';
 
 
-const {api} = window;
-const {isDev} = api;
+const { api } = window;
+const { isDev } = api;
 
 const LoginPasswordSubmitInput = ({ hidden, setHidden, password, readOnly = false, setPassword, onContextMenu, onSubmit }) => {
 
-  const [ focused, setFocused ] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   const onHideShowClick = () => {
     setHidden(!hidden);
@@ -43,21 +43,21 @@ const LoginPasswordSubmitInput = ({ hidden, setHidden, password, readOnly = fals
   return (
     <form className={`lw-login-input-container ${focused ? 'active' : ''}`} onSubmit={submitHandler}>
       <input placeholder={Localize.text('Enter password to unlock', 'login')}
-             id={'js-login-input'}
-             className={'lw-login-input'}
-             value={password}
-             type={hidden ? 'password' : 'text'}
-             autoFocus={true}
-             required={true}
-             spellCheck={false}
-             readOnly={readOnly}
-             onContextMenu={onContextMenu}
-             onChange={e => setPassword(e.target.value)}
-             onFocus={() => setFocused(true)}
-             onBlur={() => setFocused(false)} />
+        id={'js-login-input'}
+        className={'lw-login-input'}
+        value={password}
+        type={hidden ? 'password' : 'text'}
+        autoFocus={true}
+        required={true}
+        spellCheck={false}
+        readOnly={readOnly}
+        onContextMenu={onContextMenu}
+        onChange={e => setPassword(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)} />
       <button type={'button'} onClick={onHideShowClick}>
         <i className={`far ${hidden ? 'fa-eye' : 'fa-eye-slash'}`}
-           title={hidden ? Localize.text('Show password', 'login') : Localize.text('Hide password', 'login')} />
+          title={hidden ? Localize.text('Show password', 'login') : Localize.text('Hide password', 'login')} />
       </button>
       <div className={'lw-login-input-divider'} />
       <button type={'submit'} disabled={readOnly} title={readOnly ? Localize.text('Loading', 'universal') : Localize.text('Submit', 'universal')}>
@@ -81,26 +81,26 @@ LoginPasswordSubmitInput.propTypes = {
 };
 
 const okIconWidth = 20;
-const OkIcon = () => <i className={'fas fa-check lw-color-positive-1'} style={{width: okIconWidth}} />;
-const NotOkIcon = () => <i className={'fas fa-times color-negative'} style={{width: okIconWidth}} />;
-let onLoginSubmit = () => {};
+const OkIcon = () => <i className={'fas fa-check lw-color-positive-1'} style={{ width: okIconWidth }} />;
+const NotOkIcon = () => <i className={'fas fa-times color-negative'} style={{ width: okIconWidth }} />;
 
 const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
 
-  const [ initialLoadStep1, setInitialLoadStep1 ] = useState(false);
-  const [ initialLoadStep2, setInitialLoadStep2 ] = useState(false);
-  const [ hidden, setHidden ] = useState(true);
-  const [ password, setPassword ] = useState('');
-  const [ passwordRepeat, setPasswordRepeat ] = useState('');
-  const [ errorMessage, setErrorMessage ] = useState('');
-  const [ processing, setProcessing ] = useState(false);
-  const [ mnemonic, setMnemonic ] = useState('');
-  const [ cloudChainsWalletCreated, setCloudChainsWalletCreated ] = useState(false);
-  const [ cloudChainsIsWalletRPCRunning, setCloudChainsIsWalletRPCRunning ] = useState(false);
-  const [ cloudChainsStoredPassword, setCloudChainsStoredPassword ] = useState(false);
-  const [ createFromMnemonic, setCreateFromMnemonic ] = useState(false);
-  const [ restoreFromMnemonic, setRestoreFromMnemonic ] = useState(false);
-  const [ newMnemonic, setNewMnemonic ] = useState('');
+  const [initialLoadStep1, setInitialLoadStep1] = useState(false);
+  const [initialLoadStep2, setInitialLoadStep2] = useState(false);
+  const [hidden, setHidden] = useState(true);
+  const [password, setPassword] = useState('');
+  const [passwordRepeat, setPasswordRepeat] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [mnemonic, setMnemonic] = useState('');
+  const [cloudChainsWalletCreated, setCloudChainsWalletCreated] = useState(false);
+  const [cloudChainsIsWalletRPCRunning, setCloudChainsIsWalletRPCRunning] = useState(false);
+  const [cloudChainsStoredPassword, setCloudChainsStoredPassword] = useState(false);
+  const [createFromMnemonic, setCreateFromMnemonic] = useState(false);
+  const [restoreFromMnemonic, setRestoreFromMnemonic] = useState(false);
+  const [newMnemonic, setNewMnemonic] = useState('');
+  const onLoginSubmitRef = useRef(null);
 
   const passwordsMatch = password && password === passwordRepeat;
   const [
@@ -113,52 +113,18 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
   ] = checkPassword(password);
   const goodPassword = totalScore >= 9 && passwordsMatch;
 
-  // The component requires additional data before rendering
-  useEffect(() => {
-    if (!cloudChains || initialLoadStep1)
-      return;
-    setInitialLoadStep1(true);
-    Promise.all([api.env_CC_WALLET_PASS(), api.env_CC_WALLET_AUTOLOGIN(), cloudChains.getStoredPassword(), cloudChains.isWalletCreated(), cloudChains.isWalletRPCRunning()])
-      .then(values => {
-        const [CC_WALLET_PASS, CC_WALLET_AUTOLOGIN, storedPw, walletCreated, rpcRunning] = values;
-        const validPw = pw => _.isString(pw) && pw !== '';
-        if (validPw(CC_WALLET_PASS)) {
-          setPassword(CC_WALLET_PASS);
-          api.env_reset_CC_WALLET_PASS();
-        }
-        setCloudChainsWalletCreated(walletCreated);
-        setCloudChainsIsWalletRPCRunning(rpcRunning);
-        setCloudChainsStoredPassword(validPw(CC_WALLET_PASS) || validPw(storedPw));
-        setInitialLoadStep2(true); // done loading
-
-  // In dev mode you can set a CC_WALLET_PASS environmental variable to automatically populate your password on login
-  // and if you also have a CC_WALLET_AUTOLOGIN environmental variable set to true, then the wallet will autologin
-        if (isDev && validPw(CC_WALLET_PASS) && CC_WALLET_AUTOLOGIN === 'true') {
-          setTimeout(() => {
-            onLoginSubmit();
-          }, 250);
-        }
-      });
-  }, [cloudChains, initialLoadStep1, setInitialLoadStep1, setInitialLoadStep2]);
-
-  // Do not show login until we have required data
-  if (!cloudChains || !startupInit || !initialLoadStep2)
-    return <div><Spinner /></div>;
-
-  onLoginSubmit = async function() {
-
+  const onLoginSubmit = useCallback(async () => {
     setProcessing(true);
 
     const storedPassword = await cloudChains.getStoredPassword();
-
     const rpcRunning = await cloudChains.isWalletRPCRunning();
+
     if (!rpcRunning) {
       const started = await cloudChains.startSPV(password);
-      if(!started) {
-        if (storedPassword)
-          setErrorMessage(Localize.text('Invalid password.', 'login'));
-        else
-          setErrorMessage(Localize.text('Failed to start CloudChains daemon.', 'login'));
+      if (!started) {
+        setErrorMessage(storedPassword
+          ? Localize.text('Invalid password.', 'login')
+          : Localize.text('Failed to start CloudChains daemon.', 'login'));
         setProcessing(false);
         return;
       }
@@ -186,9 +152,44 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       timeout(2000),
     ]);
     setCCWalletStarted(true);
-  };
+  }, [cloudChains, password, startupInit, setCCWalletStarted]);
 
-  const onRegisterSubmit = async function(e) {
+  // Keep the ref in sync for async setTimeout calls that need the latest closure
+  useEffect(() => {
+    onLoginSubmitRef.current = onLoginSubmit;
+  }, [onLoginSubmit]);
+
+  // The component requires additional data before rendering
+  useEffect(() => {
+    if (!cloudChains || initialLoadStep1)
+      return;
+    setInitialLoadStep1(true);
+    Promise.all([api.env_CC_WALLET_PASS(), api.env_CC_WALLET_AUTOLOGIN(), cloudChains.getStoredPassword(), cloudChains.isWalletCreated(), cloudChains.isWalletRPCRunning()])
+      .then(values => {
+        const [CC_WALLET_PASS, CC_WALLET_AUTOLOGIN, storedPw, walletCreated, rpcRunning] = values;
+        const validPw = pw => _.isString(pw) && pw !== '';
+        if (validPw(CC_WALLET_PASS)) {
+          setPassword(CC_WALLET_PASS);
+          api.env_reset_CC_WALLET_PASS();
+        }
+        setCloudChainsWalletCreated(walletCreated);
+        setCloudChainsIsWalletRPCRunning(rpcRunning);
+        setCloudChainsStoredPassword(validPw(CC_WALLET_PASS) || validPw(storedPw));
+        setInitialLoadStep2(true); // done loading
+
+        // In dev mode you can set a CC_WALLET_PASS environmental variable to automatically populate your password on login
+        // and if you also have a CC_WALLET_AUTOLOGIN environmental variable set to true, then the wallet will autologin
+        if (isDev && validPw(CC_WALLET_PASS) && CC_WALLET_AUTOLOGIN === 'true') {
+          setTimeout(() => { onLoginSubmitRef.current(); }, 250);
+        }
+      });
+  }, [cloudChains, initialLoadStep1, onLoginSubmit, setInitialLoadStep1, setInitialLoadStep2]);
+
+  // Do not show login until we have required data
+  if (!cloudChains || !startupInit || !initialLoadStep2)
+    return <div><Spinner /></div>;
+
+  const onRegisterSubmit = async function (e) {
     e.preventDefault();
 
     const preppedMnemonic = newMnemonic
@@ -196,12 +197,12 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       .replace(/\s+/g, ' ')
       .trim();
 
-    if(createFromMnemonic && preppedMnemonic.length === 0)
+    if (createFromMnemonic && preppedMnemonic.length === 0)
       return Alert.alert(Localize.text('Missing Mnemonic', 'login'), Localize.text('You must enter a valid mnemonic.', 'login'));
 
-    if(restoreFromMnemonic) {
+    if (restoreFromMnemonic) {
       const { isConfirmed } = await Alert.warning(Localize.text('Are you sure?', 'login'), Localize.text('Importing a new mnemonic will remove the old wallet. Please backup the old wallet before proceeding!', 'login'));
-      if(!isConfirmed) {
+      if (!isConfirmed) {
         setProcessing(false);
         return;
       }
@@ -217,7 +218,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       setProcessing(false);
       return;
     }
-    if(!m) {
+    if (!m) {
       setErrorMessage(Localize.text('There was a problem creating the wallet.', 'login'));
       setProcessing(false);
       return;
@@ -232,7 +233,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
 
     try {
       await cloudChains.loadConfs(); // load all confs and update the master conf if necessary
-    } catch(err) {
+    } catch {
       logger.error('Problem enabling master config.');
       setErrorMessage(Localize.text('Oops! There was a problem enabling the master config.', 'login'));
       setProcessing(false);
@@ -240,17 +241,17 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
     }
 
     const started = await cloudChains.startSPV(password);
-    if(!started) {
+    if (!started) {
       setErrorMessage(Localize.text('Oops! There was a problem starting and unlocking the wallet.', 'login'));
       setProcessing(false);
       return;
     }
 
-    if(preppedMnemonic) {
-      const addrSuccess = await cloudChains.setAllConfigAddressCounts();
-      if(!addrSuccess)
-        logger.error('There was a problem setting all address config counts');
-    }
+    // if(preppedMnemonic) {
+    //   const addrSuccess = await cloudChains.setAllConfigAddressCounts();
+    //   if(!addrSuccess)
+    //     logger.error('There was a problem setting all address config counts');
+    // }
 
     setErrorMessage(''); // clear error on success
     const storedPassword = await cloudChains.getStoredPassword();
@@ -265,7 +266,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
     setCloudChainsStoredPassword(!!storedPassword && storedPassword !== '');
     setCloudChainsWalletCreated(walletCreated);
     setCloudChainsIsWalletRPCRunning(isRpcRunning);
-    if(preppedMnemonic) { // If they entered their own mnemonic, just open the application
+    if (preppedMnemonic) { // If they entered their own mnemonic, just open the application
       setCCWalletStarted(true);
     } else { // If a new mnemonic was generated, show it to them
       setMnemonic(m);
@@ -280,7 +281,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
   let textareaNode;
 
   const onTextareaFocus = () => {
-    if(textareaNode) textareaNode.select();
+    if (textareaNode) textareaNode.select();
   };
 
   const toggleCreateFromMnemonic = e => {
@@ -290,7 +291,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
 
   const toggleRestoreFromMnemonic = e => {
     e.preventDefault();
-    if(restoreFromMnemonic) {
+    if (restoreFromMnemonic) {
       setRestoreFromMnemonic(false);
     } else {
       setRestoreFromMnemonic(true);
@@ -298,7 +299,6 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
   };
 
   const onMnemonicChange = e => {
-    e.preventDefault();
     setNewMnemonic(e.target.value);
   };
 
@@ -332,17 +332,17 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
 
   return (
     <div className={'lw-login-container'}>
-        <div className={'alert lw-beta-warning'}>
-          <div className="d-flex align-items-start">
+      <div className={'alert lw-beta-warning'}>
+        <div className="d-flex align-items-start">
           <i className="fas fa-info-circle alert-icon"></i>
-            <div>
-              <h4 className="alert-title">XLite Wallet is currently in beta.</h4>
-              <p className="alert-content">
+          <div>
+            <h4 className="alert-title">XLite Wallet is currently in beta.</h4>
+            <p className="alert-content">
               XLite wallet is provided for experimental purposes only and is not intended for public use. The use of XLite for storing digital assets carries inherent risks, and any reliance on it is at your own discretion and risk. XLite is provided 'as is' without any warranties or representations, express or implied. It is your responsibility to ensure compliance with all applicable laws and regulations regarding the use of XLite in your jurisdiction. We disclaim any liability for damages or losses arising from the use or inability to use XLite. By using XLite, you acknowledge and agree to these terms.
-              </p>
-            </div>
+            </p>
           </div>
         </div>
+      </div>
       <div className={'lw-login-inner-container'}>
         <div className={'lw-login-image-container'}>
           <Logo className={'lw-login-image'} />
@@ -350,85 +350,85 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
         {mnemonic &&
           <div style={styles.bodyContainer}>
 
-            <div className={'lw-color-secondary-3'} style={{marginBottom: 20, fontSize: 14}}><Localize context={'login'}>Below is the mnemonic seed for your wallet. Please save it securely for your records. If you forget your password or otherwise lose your wallet, you will be able to restore your wallet using these words.</Localize></div>
+            <div className={'lw-color-secondary-3'} style={{ marginBottom: 20, fontSize: 14 }}><Localize context={'login'}>Below is the mnemonic seed for your wallet. Please save it securely for your records. If you forget your password or otherwise lose your wallet, you will be able to restore your wallet using these words.</Localize></div>
             <textarea ref={node => node ? textareaNode = node : null} className={'lw-login-textarea text-center text-monospace'} rows={4} value={mnemonic} readOnly={true} onFocus={onTextareaFocus} onContextMenu={onMnemonicContextMenu} />
 
             <Button
               type={'button'}
               className={'w-100'}
               onClick={onMnemonicContinueClick}
-              style={{marginTop: 25, height: 50}}><Localize context={'login'}>Continue</Localize></Button>
+              style={{ marginTop: 25, height: 50 }}><Localize context={'login'}>Continue</Localize></Button>
           </div>
         }
-        { showLogin && !mnemonic &&
-            <div style={styles.bodyContainer}>
-              <LoginPasswordSubmitInput
+        {showLogin && !mnemonic &&
+          <div style={styles.bodyContainer}>
+            <LoginPasswordSubmitInput
+              hidden={hidden}
+              setHidden={setHidden}
+              password={password}
+              setPassword={setPassword}
+              readOnly={processing}
+              onContextMenu={onPasswordContextMenu}
+              onSubmit={onLoginSubmit} />
+            <div className={'lw-login-create-from-mnemonic-button-container'}>
+              <a href={'#'} className={'lw-login-create-from-mnemonic-button'}
+                onClick={toggleRestoreFromMnemonic}>{Localize.text('Restore wallet from mnemonic', 'login')}</a>
+            </div>
+          </div>
+        }
+        {showRegistration && !mnemonic &&
+          <div style={styles.bodyContainer}>
+            <form onSubmit={onRegisterSubmit}>
+              <LoginInput placeholder={Localize.text('Enter password', 'login')}
+                autoFocus={true}
+                value={password}
+                type={'password'}
                 hidden={hidden}
                 setHidden={setHidden}
-                password={password}
-                setPassword={setPassword}
                 readOnly={processing}
                 onContextMenu={onPasswordContextMenu}
-                onSubmit={onLoginSubmit} />
-              <div className={'lw-login-create-from-mnemonic-button-container'}>
+                onChange={setPassword} />
+              <LoginInput placeholder={Localize.text('Repeat password', 'login')}
+                value={passwordRepeat}
+                type={'password'}
+                hidden={hidden}
+                readOnly={processing}
+                onContextMenu={onPasswordContextMenu}
+                onChange={setPasswordRepeat} />
+              {createFromMnemonic || restoreFromMnemonic ?
+                <textarea className={'lw-login-textarea'}
+                  rows={4} value={newMnemonic} style={{ fontSize: 16 }}
+                  placeholder={Localize.text('Enter mnemonic', 'login')}
+                  required={true} onChange={onMnemonicChange} onContextMenu={onEnterMnemonicContextMenu} />
+                :
+                null
+              }
+              <div className={'lw-login-create-from-mnemonic-button-container'} style={{ marginTop: createFromMnemonic || restoreFromMnemonic ? 0 : -10 }}>
                 <a href={'#'} className={'lw-login-create-from-mnemonic-button'}
-                   onClick={toggleRestoreFromMnemonic}>{Localize.text('Restore wallet from mnemonic', 'login')}</a>
+                  onClick={restoreFromMnemonic ? toggleRestoreFromMnemonic : toggleCreateFromMnemonic}>{restoreFromMnemonic || createFromMnemonic ? Localize.text('Hide mnemonic input', 'login') : Localize.text('Create wallet from mnemonic', 'login')}</a>
               </div>
-            </div>
-        }
-        { showRegistration && !mnemonic &&
-            <div style={styles.bodyContainer}>
-              <form onSubmit={onRegisterSubmit}>
-                <LoginInput placeholder={Localize.text('Enter password', 'login')}
-                            autoFocus={true}
-                            value={password}
-                            type={'password'}
-                            hidden={hidden}
-                            setHidden={setHidden}
-                            readOnly={processing}
-                            onContextMenu={onPasswordContextMenu}
-                            onChange={setPassword} />
-                <LoginInput placeholder={Localize.text('Repeat password', 'login')}
-                            value={passwordRepeat}
-                            type={'password'}
-                            hidden={hidden}
-                            readOnly={processing}
-                            onContextMenu={onPasswordContextMenu}
-                            onChange={setPasswordRepeat} />
-                {createFromMnemonic || restoreFromMnemonic ?
-                  <textarea className={'lw-login-textarea'}
-                            rows={4} value={newMnemonic} style={{fontSize: 16}}
-                            placeholder={Localize.text('Enter mnemonic', 'login')}
-                            required={true} onChange={onMnemonicChange} onContextMenu={onEnterMnemonicContextMenu} />
-                  :
-                  null
-                }
-                <div className={'lw-login-create-from-mnemonic-button-container'} style={{marginTop: createFromMnemonic || restoreFromMnemonic ? 0 : -10}}>
-                  <a href={'#'} className={'lw-login-create-from-mnemonic-button'}
-                     onClick={restoreFromMnemonic ? toggleRestoreFromMnemonic : toggleCreateFromMnemonic}>{restoreFromMnemonic || createFromMnemonic ? Localize.text('Hide mnemonic input', 'login') : Localize.text('Create wallet from mnemonic', 'login')}</a>
+              <div style={{ marginBottom: 10 }}>
+                <div className={'lw-color-secondary-5'} style={{ fontSize: 13 }}>
+                  <div>{passwordContainsLowercase ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain a lowercase character.')}</div>
+                  <div>{passwordContainsUppercase ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain an uppercase character.')}</div>
+                  <div>{passwordContainsNumber ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain a number.')}</div>
+                  <div>{passwordContainsSpecial ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain a special character.')}</div>
+                  <div>{passwordLengthGood ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain at least 8 characters.')}</div>
+                  <div>{passwordsMatch ? <OkIcon /> : <NotOkIcon />} {Localize.text('Passwords must match.')}</div>
                 </div>
-                <div style={{marginBottom: 10}}>
-                  <div className={'lw-color-secondary-5'} style={{fontSize: 13}}>
-                    <div>{passwordContainsLowercase ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain a lowercase character.')}</div>
-                    <div>{passwordContainsUppercase ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain an uppercase character.')}</div>
-                    <div>{passwordContainsNumber ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain a number.')}</div>
-                    <div>{passwordContainsSpecial ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain a special character.')}</div>
-                    <div>{passwordLengthGood ? <OkIcon /> : <NotOkIcon />} {Localize.text('Password must contain at least 8 characters.')}</div>
-                    <div>{passwordsMatch ? <OkIcon /> : <NotOkIcon />} {Localize.text('Passwords must match.')}</div>
-                  </div>
-                </div>
+              </div>
 
-                <Button
-                  type={'submit'}
-                  className={'w-100'}
-                  disabled={!goodPassword || processing}
-                  style={{height: 50}}>{processing ? <Spinner /> : restoreFromMnemonic ? <Localize context={'login'}>Restore Wallet</Localize> : <Localize context={'login'}>Create Wallet</Localize>}</Button>
+              <Button
+                type={'submit'}
+                className={'w-100'}
+                disabled={!goodPassword || processing}
+                style={{ height: 50 }}>{processing ? <Spinner /> : restoreFromMnemonic ? <Localize context={'login'}>Restore Wallet</Localize> : <Localize context={'login'}>Create Wallet</Localize>}</Button>
 
-              </form>
-            </div>
+            </form>
+          </div>
         }
         {errorMessage ?
-          <div className={'color-negative'} style={{marginTop: 10, fontSize: 13}}>
+          <div className={'color-negative'} style={{ marginTop: 10, fontSize: 13 }}>
             {errorMessage}</div>
           :
           null
