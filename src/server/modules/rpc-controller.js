@@ -462,7 +462,7 @@ class RPCController {
     try {
       await this._makeRequest('stop', []);
       return true;
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }

@@ -108,7 +108,7 @@ class ConfController {
       let xbtext = '';
       try {
         xbtext = await fs.readFile(path.join(xbconfDir, token.xbridge_conf), 'utf8');
-      } catch (e) {
+      } catch (_err) {
         continue; // skip bad confs
       }
       const xbInfo = this._parseXBridgeConf(xbtext);

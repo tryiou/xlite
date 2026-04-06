@@ -35,7 +35,7 @@ export default class Chart extends React.Component {
     gradientBottomColor: PropTypes.string,
     chartGridColor: PropTypes.string,
     chartScale: PropTypes.string, // Supported scales: day, week, month, half-year, year
-  }
+  };
 
   constructor(props) {
     super(props);

@@ -23,7 +23,7 @@ class ConfController {
   async getManifest() {
     try {
       return await this._api.confController_getManifest();
-    } catch (err) {
+    } catch (_err) {
       return [];
     }
   }
@@ -35,7 +35,7 @@ class ConfController {
   async getManifestHash() {
     try {
       return await this._api.confController_getManifestHash();
-    } catch (err) {
+    } catch (_err) {
       return '';
     }
   }
@@ -51,7 +51,7 @@ class ConfController {
       for (const o of objs)
         r.push(new XBridgeInfo(o));
       return r;
-    } catch (err) {
+    } catch (_err) {
       return [];
     }
   }

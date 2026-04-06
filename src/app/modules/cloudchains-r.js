@@ -45,7 +45,7 @@ class CloudChains {
   async isInstalled() {
     try {
       return await this._api.cloudChains_isInstalled();
-    } catch (err) {
+    } catch (_err) {
       return false;
     }
   }
@@ -57,7 +57,7 @@ class CloudChains {
   async hasSettings() {
     try {
       return await this._api.cloudChains_hasSettings();
-    } catch (err) {
+    } catch (_err) {
       return false;
     }
   }
@@ -72,7 +72,7 @@ class CloudChains {
     try {
       const conf = await this._api.cloudChains_getWalletConf(ticker);
       return new CCWalletConf(ticker, conf);
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -86,9 +86,9 @@ class CloudChains {
       const confs = await this._api.cloudChains_getWalletConfs();
       const r = [];
       for (const conf of confs)
-        r.push(new CCWalletConf('', conf)); // empty ticker because it's set by Object.assign(conf)
+        r.push(new CCWalletConf('', conf));
       return r;
-    } catch (err) {
+    } catch (_err) {
       return [];
     }
   }
@@ -100,8 +100,8 @@ class CloudChains {
   async getMasterConf() {
     try {
       const conf = await this._api.cloudChains_getMasterConf();
-      return new CCWalletConf('', conf); // empty ticker because it's set by Object.assign(conf)
-    } catch (err) {
+      return new CCWalletConf('', conf);
+    } catch (_err) {
       return null;
     }
   }
@@ -113,7 +113,7 @@ class CloudChains {
   async isWalletCreated() {
     try {
       return await this._api.cloudChains_isWalletCreated();
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -126,7 +126,7 @@ class CloudChains {
   async saveWalletCredentials(password, salt) {
     try {
       return await this._api.cloudChains_saveWalletCredentials(password, salt);
-    } catch (err) {
+    } catch (_err) {
       return false;
     }
   }
@@ -138,7 +138,7 @@ class CloudChains {
   async getStoredPassword() {
     try {
       return await this._api.cloudChains_getStoredPassword();
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -150,7 +150,7 @@ class CloudChains {
   async getStoredSalt() {
     try {
       return await this._api.cloudChains_getStoredSalt();
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -163,7 +163,7 @@ class CloudChains {
   async getDecryptedMnemonic(password) {
     try {
       return await this._api.cloudChains_getDecryptedMnemonic(password);
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -178,7 +178,7 @@ class CloudChains {
   async loadConfs() {
     try {
       return await this._api.cloudChains_loadConfs();
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }
@@ -190,7 +190,7 @@ class CloudChains {
   async getCCSPVVersion() {
     try {
       return await this._api.cloudChains_getCCSPVVersion();
-    } catch (e) {
+    } catch (_err) {
       return '';
     }
   }
@@ -203,7 +203,7 @@ class CloudChains {
   async isWalletRPCRunning() {
     try {
       return await this._api.cloudChains_isWalletRPCRunning();
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }
@@ -215,7 +215,7 @@ class CloudChains {
   async spvIsRunning() {
     try {
       return await this._api.cloudChains_spvIsRunning();
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }
@@ -228,7 +228,7 @@ class CloudChains {
   async startSPV(password = '') {
     try {
       return await this._api.cloudChains_startSPV(password);
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }
@@ -240,7 +240,7 @@ class CloudChains {
   async stopSPV() {
     try {
       return await this._api.cloudChains_stopSPV();
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }
@@ -267,7 +267,7 @@ class CloudChains {
   async enableAllWallets() {
     try {
       return await this._api.cloudChains_enableAllWallets();
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }
@@ -312,7 +312,7 @@ class CloudChains {
   async isNewInstall() {
     try {
       return await this._api.cloudChains_isNewInstall();
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }
@@ -325,7 +325,7 @@ class CloudChains {
   async setAllConfigAddressCounts(addressCount) {
     try {
       return await this._api.cloudChains_setAllConfigAddressCounts(addressCount);
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }

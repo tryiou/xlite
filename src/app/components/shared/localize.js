@@ -60,13 +60,13 @@ export default class Localize extends React.Component {
       return str.replace(patt, replacers[k]);
     }, text);
     return text;
-  }
+  };
 
   static number = (num, decimalPlaces) => {
     if(isNumber(decimalPlaces) && decimalPlaces > -1)
       num = Number(num.toFixed(decimalPlaces));
     return num.toLocaleString(selectedLocale);
-  }
+  };
 
   constructor(props) {
     super(props);

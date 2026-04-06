@@ -68,7 +68,7 @@ export default class AssetPieChart extends React.Component {
     chartData: PropTypes.arrayOf(PropTypes.instanceOf(AssetPieChartData)),
     defaultWidth: PropTypes.number,
     lineWidth: PropTypes.number,
-  }
+  };
 
   constructor(props) {
     super(props);

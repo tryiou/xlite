@@ -166,7 +166,7 @@ function startupInit(walletController, confController, pricingController, confNe
   return async (slowLoad = false) => {
     try {
       await walletController.loadWallets();
-    } catch (err) {
+    } catch (_err) {
       // Fatal error, warn user and exit program
       await Alert.error(Localize.text('Issue'), Localize.text('Failed to load CloudChains wallet configs.'));
       await api.general_requestClose('fatal error, failed to load CloudChains conf files');

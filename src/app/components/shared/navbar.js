@@ -31,7 +31,7 @@ let Navbar = ({ windowWidth, showReceiveModal, showSendModal }) => {
 
   return (
     <div className={'lw-navbar-container'}>
-      <div className='logo-badge-container'>
+      <div className="logo-badge-container">
         <Logo className={'lw-navbar-logo'} />
         <BetaBadge />
       </div>

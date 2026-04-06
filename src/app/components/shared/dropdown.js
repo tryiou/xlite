@@ -42,7 +42,7 @@ export const Dropdown = ({ items = [], placeholder = '', value = '', style = {},
               </BootstrapDropdown.Item>
             ))
         ) : (
-          <BootstrapDropdown.Item disabled>----</BootstrapDropdown.Item>
+          <BootstrapDropdown.Item disabled={true}>----</BootstrapDropdown.Item>
         )}
       </BootstrapDropdown.Menu>
     </BootstrapDropdown>

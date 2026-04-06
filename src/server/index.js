@@ -144,7 +144,7 @@ const startup = async () => {
 
     try {
       cloudChains.loadConfs();
-    } catch (e) {
+    } catch (_err) {
       logger.error('Problem loading configs');
       // Fatal error, warn user and exit program
       displayFatalError = makeError(Localize.text('Issue'), Localize.text('The CloudChains Litewallet configs failed to load.'));
@@ -159,7 +159,7 @@ const startup = async () => {
     // Update confs with manifest data
     try {
       cloudChains.loadConfs(new TokenManifest(confController.getManifest(), confController.getXBridgeInfo())); // update rpc
-    } catch (e) {
+    } catch (_err) {
       logger.error('Problem updating configs');
       // Fatal error, warn user and exit program
       displayFatalError = makeError(Localize.text('Issue'), Localize.text('The CloudChains Litewallet configs failed to update.'));
@@ -180,7 +180,7 @@ const startup = async () => {
     // Load latest configuration prior to any further initialization
     try {
       cloudChains.loadConfs();
-    } catch (e) {
+    } catch (_err) {
       logger.error('Problem loading configs');
       // Fatal error, warn user and exit program
       displayFatalError = makeError(Localize.text('Issue'), Localize.text('The CloudChains Litewallet configs failed to load.'));

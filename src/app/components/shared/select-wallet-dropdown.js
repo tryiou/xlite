@@ -41,7 +41,7 @@ const SelectWalletDropdown = ({ selected = '', style = {}, wallets, onSelect }) 
             </Dropdown.Item>
           ))
         ) : (
-          <Dropdown.Item disabled>
+          <Dropdown.Item disabled={true}>
             ----
           </Dropdown.Item>
         )}

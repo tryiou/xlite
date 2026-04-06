@@ -33,7 +33,7 @@ class Wallet {
     let coinData;
     try {
       coinData = fs.readJsonSync(coinDataPath);
-    } catch(err) {
+    } catch(_err) {
       logger.error(`Error loading ${coinDataPath}`);
       coinData = [];
     }

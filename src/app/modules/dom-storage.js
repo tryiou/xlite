@@ -29,7 +29,7 @@ class DOMStorage {
     try {
       const data = JSON.parse(json);
       return data;
-    } catch(err) {
+    } catch(_err) {
       return null;
     }
   }

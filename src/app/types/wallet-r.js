@@ -157,7 +157,7 @@ class Wallet {
   async getBalance() {
     try {
       return await this._api.wallet_getBalance(this.ticker);
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -193,7 +193,7 @@ class Wallet {
   async getAddresses() {
     try {
       return await this._api.wallet_getAddresses(this.ticker);
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -205,7 +205,7 @@ class Wallet {
   async generateNewAddress() {
     try {
       return await this._api.wallet_generateNewAddress(this.ticker);
-    } catch (err) {
+    } catch (_err) {
       return '';
     }
   }
@@ -219,7 +219,7 @@ class Wallet {
     try {
       const unspent = await this._api.wallet_getCachedUnspent(this.ticker, cacheExpirySeconds);
       return unspent.map(utxo => new RPCUnspent(utxo));
-    } catch (err) {
+    } catch (_err) {
       return [];
     }
   }
@@ -259,7 +259,7 @@ class Wallet {
   async send(recipients) {
     try {
       return await this._api.wallet_send(this.ticker, recipients);
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }

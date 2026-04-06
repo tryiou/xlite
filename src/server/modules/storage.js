@@ -32,7 +32,7 @@ class SimpleStorage {
     let data;
     try {
       data = fs.readJsonSync(dataFilePath);
-    } catch(err) {
+    } catch(_err) {
       data = {};
       fs.writeJsonSync(dataFilePath, data);
     }

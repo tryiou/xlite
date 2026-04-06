@@ -55,7 +55,7 @@ const BackupModal = ({ hideBackupModal, cloudChains }) => {
     }
 
     const storedMnemonic = await cloudChains.getDecryptedMnemonic(password);
-    const blob = new Blob([storedMnemonic], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([storedMnemonic], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
     link.download = 'xlite_backup.txt';

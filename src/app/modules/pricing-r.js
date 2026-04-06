@@ -55,7 +55,7 @@ export default class Pricing {
       priceData = await this._api.pricing_getPrice(ticker, currency);
       if (!_.isArray(priceData) || priceData.length === 0)
         return latestData; // last known data on error
-    } catch (e) {
+    } catch (_err) {
       logger.debug(`failed to fetch pricing data for ${ticker}/${currency}`);
       return latestData; // last known data on error
     }

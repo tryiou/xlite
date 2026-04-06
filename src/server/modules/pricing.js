@@ -124,7 +124,7 @@ export default class Pricing {
     let priceData;
     try {
       priceData = await this._req(ticker, currency);
-    } catch (e) {
+    } catch (_err) {
       logger.debug(`failed to fetch pricing data for ${ticker}/${currency}`);
       return null;
     }

@@ -502,7 +502,7 @@ class CloudChains {
     try {
       const res = await this._rpc.ccHelp();
       return !(res instanceof Error);
-    } catch (e) {
+    } catch (_err) {
       return false;
     }
   }
@@ -1031,7 +1031,7 @@ class CloudChains {
     try {
       writeJsonSync(filePath, conf, {spaces: 4});
       return true;
-    } catch (e) {
+    } catch (_err) {
       logger.error(`failed to write conf at path ${filePath}`);
       return false;
     }
@@ -1050,7 +1050,7 @@ class CloudChains {
       const res = await this._rpc.ccHelp();
       if (res && !(res instanceof Error))
         return true;
-    } catch (e) {
+    } catch (_err) {
       // non-fatal
     }
     if (unixTime() >= expiry)

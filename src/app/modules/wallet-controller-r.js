@@ -82,7 +82,7 @@ class WalletController {
    * @param loadingTransactions {boolean}
    * @private
    */
-    // eslint-disable-next-line no-unused-vars
+     
   _dispatchLoadingTransactions = loadingTransactions => {};
 
   /**
@@ -115,7 +115,7 @@ class WalletController {
           r.push(new Wallet(wallet, this._api, this._domStorage, this._db));
       }
       return r;
-    } catch (err) {
+    } catch (_err) {
       return [];
     }
   }
@@ -131,7 +131,7 @@ class WalletController {
       if (!wallet)
         return null;
       return new Wallet(wallet, this._api, this._domStorage, this._db);
-    } catch (err) {
+    } catch (_err) {
       return null;
     }
   }
@@ -149,7 +149,7 @@ class WalletController {
           r.push(new Wallet(wallet, this._api, this._domStorage, this._db));
       }
       return r;
-    } catch (err) {
+    } catch (_err) {
       return [];
     }
   }
@@ -162,7 +162,7 @@ class WalletController {
     try {
       const balances = await this._api.walletController_getBalances();
       return new Map(balances);
-    } catch (err) {
+    } catch (_err) {
       return new Map();
     }
   }
@@ -395,7 +395,7 @@ class WalletController {
       const data = new Map(!_.isNil(txns) ? txns.entries() : null);
       data.set(wallet.ticker, transactions);
       store.dispatch(action(IMap(data)));
-    } catch (e) {
+    } catch (_err) {
       // fail silently
     }
   }
@@ -448,7 +448,7 @@ class WalletController {
   async updatePriceMultipliers() {
     try {
       await this._api.walletController_updatePriceMultipliers();
-    } catch (err) {
+    } catch (_err) {
       // TODO fail silently?
     }
   }
