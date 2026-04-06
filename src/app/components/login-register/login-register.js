@@ -7,7 +7,6 @@ import { logger } from '../../modules/logger-r';
 import Logo from '../shared/logo';
 import CloudChains from '../../modules/cloudchains-r';
 import { Button } from '../shared/buttons';
-import { pbkdf2 } from '../../modules/crypt';
 import Spinner from '../shared/spinner';
 
 import _ from 'lodash';
@@ -20,7 +19,6 @@ import ContextMenu from '../../modules/context-menu';
 
 
 const { api } = window;
-const { isDev } = api;
 
 const LoginPasswordSubmitInput = ({ hidden, setHidden, password, readOnly = false, setPassword, onContextMenu, onSubmit }) => {
 
@@ -128,15 +126,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
         setProcessing(false);
         return;
       }
-    } else if (storedPassword) {
-      const storedSalt = await cloudChains.getStoredSalt();
-      const hashedPassword = pbkdf2(password, storedSalt);
-      if (hashedPassword !== storedPassword) {
-        setErrorMessage(Localize.text('Invalid password.', 'login'));
-        setProcessing(false);
-        return;
-      }
-    } else {
+    } else if (!storedPassword) {
       setErrorMessage(Localize.text('Invalid password.', 'login'));
       setProcessing(false);
       return;
@@ -164,22 +154,17 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
     if (!cloudChains || initialLoadStep1)
       return;
     setInitialLoadStep1(true);
-    Promise.all([api.env_CC_WALLET_PASS(), api.env_CC_WALLET_AUTOLOGIN(), cloudChains.getStoredPassword(), cloudChains.isWalletCreated(), cloudChains.isWalletRPCRunning()])
+    Promise.all([api.env_shouldAutoLogin(), cloudChains.getStoredPassword(), cloudChains.isWalletCreated(), cloudChains.isWalletRPCRunning()])
       .then(values => {
-        const [CC_WALLET_PASS, CC_WALLET_AUTOLOGIN, storedPw, walletCreated, rpcRunning] = values;
-        const validPw = pw => _.isString(pw) && pw !== '';
-        if (validPw(CC_WALLET_PASS)) {
-          setPassword(CC_WALLET_PASS);
-          api.env_reset_CC_WALLET_PASS();
-        }
+        const [shouldAutoLogin, storedPw, walletCreated, rpcRunning] = values;
         setCloudChainsWalletCreated(walletCreated);
         setCloudChainsIsWalletRPCRunning(rpcRunning);
-        setCloudChainsStoredPassword(validPw(CC_WALLET_PASS) || validPw(storedPw));
+        setCloudChainsStoredPassword(!!storedPw);
         setInitialLoadStep2(true); // done loading
 
-        // In dev mode you can set a CC_WALLET_PASS environmental variable to automatically populate your password on login
-        // and if you also have a CC_WALLET_AUTOLOGIN environmental variable set to true, then the wallet will autologin
-        if (isDev && validPw(CC_WALLET_PASS) && CC_WALLET_AUTOLOGIN === 'true') {
+        // Auto-login when CC_WALLET_PASS and CC_WALLET_AUTOLOGIN env vars are set.
+        // The raw password never reaches the renderer — main process uses it internally.
+        if (shouldAutoLogin) {
           setTimeout(() => { onLoginSubmitRef.current(); }, 250);
         }
       });

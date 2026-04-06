@@ -85,6 +85,7 @@ const cloudChains = new CloudChains(CloudChains.defaultPathFunc, storage);
 // Set env password
 const { CC_WALLET_PASS = '' } = process.env;
 if (CC_WALLET_PASS !== '') {
+  cloudChains.setEnvPassword(CC_WALLET_PASS);
   if (!cloudChains.saveWalletCredentials(CC_WALLET_PASS, null))
     logger.error('failed to save CC_WALLET_PASS wallet credentials');
 }

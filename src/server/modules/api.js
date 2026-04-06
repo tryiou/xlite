@@ -154,6 +154,21 @@ class Api {
   }
 
   /**
+   * Validate that a value is a non-empty string.
+   * @param value {*}
+   * @param name {string} Parameter name for logging
+   * @returns {boolean}
+   * @private
+   */
+  _validateString(value, name) {
+    if (typeof value !== 'string' || value.length === 0) {
+      logger.error(`Invalid argument: ${name} must be a non-empty string`);
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Create api handlers.
    * @private
    */
@@ -181,13 +196,12 @@ class Api {
    * @private
    */
   _initEnv() {
-    this._proc.handle(apiConstants.env_CC_WALLET_PASS, (evt, arg) => {
-      return process.env.CC_WALLET_PASS;
+    this._proc.handle(apiConstants.env_shouldAutoLogin, (evt, arg) => {
+      return !!process.env.CC_WALLET_PASS && process.env.CC_WALLET_AUTOLOGIN === 'true';
     });
-    this._proc.handle(apiConstants.env_CC_WALLET_AUTOLOGIN, (evt, arg) => {
-      return process.env.CC_WALLET_AUTOLOGIN;
-    });
-    this._proc.on(apiConstants.env_reset_CC_WALLET_PASS, (evt, arg) => {
+    this._proc.on(apiConstants.env_resetAutoLogin, (evt, arg) => {
+      if (this._cloudChains)
+        this._cloudChains.clearEnvPassword();
       process.env.CC_WALLET_AUTOLOGIN = '';
     });
   }
@@ -223,8 +237,16 @@ class Api {
       evt.returnValue = publicPath;
     });
     this._proc.on(apiConstants.general_openUrl, (evt, url) => {
-      if (this._allowOpenExternalLinks && /^https:\/\/(?!file)[a-zA-Z0-9_]+\.(?:(?!\/\/)[a-zA-Z0-9_%$?/.])+$/i.test(url))
-        electron.shell.openExternal(url); // TODO Improve Security whitelist
+      if (this._allowOpenExternalLinks && typeof url === 'string') {
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol === 'https:' && parsed.hostname && !parsed.hostname.includes('..')) {
+            electron.shell.openExternal(url);
+          }
+        } catch (_e) {
+          logger.error(`Invalid URL rejected: ${url}`);
+        }
+      }
     });
     this._proc.handle(apiConstants.general_qrCode, (evt, data) => {
       return new Promise((resolve, reject) => {
@@ -338,6 +360,12 @@ class Api {
       return this._cloudChains.isWalletCreated();
     });
     this._proc.handle(apiConstants.cloudChains_saveWalletCredentials, (evt, password, salt) => {
+      if (!this._validateString(password, 'password'))
+        return false;
+      if (salt !== null && typeof salt !== 'string') {
+        logger.error('Invalid argument: salt must be a string or null');
+        return false;
+      }
       return this._cloudChains.saveWalletCredentials(password, salt);
     });
     this._proc.handle(apiConstants.cloudChains_getStoredPassword, (evt, arg) => {
@@ -347,6 +375,8 @@ class Api {
       return this._cloudChains.getStoredSalt();
     });
     this._proc.handle(apiConstants.cloudChains_getDecryptedMnemonic, (evt, password) => {
+      if (!this._validateString(password, 'password'))
+        return null;
       return this._cloudChains.getDecryptedMnemonic(password);
     });
     this._proc.handle(apiConstants.cloudChains_loadConfs, (evt, arg) => {
@@ -362,14 +392,23 @@ class Api {
       return this._cloudChains.spvIsRunning();
     });
     this._proc.handle(apiConstants.cloudChains_startSPV, (evt, password) => {
-      return this._cloudChains.startSPV(password);
+      if (password !== null && typeof password !== 'string') {
+        logger.error('Invalid argument: password must be a string');
+        return false;
+      }
+      return this._cloudChains.startSPV(password || '');
     });
     this._proc.handle(apiConstants.cloudChains_stopSPV, (evt, arg) => {
       return this._cloudChains.stopSPV();
     });
     this._proc.handle(apiConstants.cloudChains_createSPVWallet, (evt, password, mnemonic) => {
-      if (password)
-        this._clearWalletStorage();
+      if (!this._validateString(password, 'password'))
+        return false;
+      if (mnemonic !== null && typeof mnemonic !== 'string') {
+        logger.error('Invalid argument: mnemonic must be a string or null');
+        return false;
+      }
+      this._clearWalletStorage();
       if (this._cloudChains.isInstalled() && !mnemonic)
         logger.info('Wallet file exists before createSPVWallet - will be backed up');
       return this._cloudChains.createSPVWallet(password, mnemonic);
@@ -378,9 +417,15 @@ class Api {
       return this._cloudChains.enableAllWallets();
     });
     this._proc.handle(apiConstants.cloudChains_changePassword, (evt, oldPassword, newPassword) => {
+      if (!this._validateString(oldPassword, 'oldPassword'))
+        return false;
+      if (!this._validateString(newPassword, 'newPassword'))
+        return false;
       return this._cloudChains.changePassword(oldPassword, newPassword);
     });
     this._proc.handle(apiConstants.cloudChains_matchesStoredPassword, (evt, password) => {
+      if (!this._validateString(password, 'password'))
+        return false;
       return this._cloudChains.matchesStoredPassword(password);
     });
     this._proc.handle(apiConstants.cloudChains_isNewInstall, (evt, arg) => {
@@ -462,39 +507,53 @@ class Api {
    */
   _initWallet() {
     this._proc.handle(apiConstants.wallet_rpcEnabled, (evt, ticker) => {
-      return this._walletController.getWallet(ticker).rpcEnabled();
+      const wallet = this._walletController.getWallet(ticker);
+      return wallet ? wallet.rpcEnabled() : null;
     });
     this._proc.handle(apiConstants.wallet_getBalance, (evt, ticker) => {
-      return this._walletController.getWallet(ticker).getBalance();
+      const wallet = this._walletController.getWallet(ticker);
+      return wallet ? wallet.getBalance() : null;
     });
     this._proc.handle(apiConstants.wallet_getTransactions, async (evt, ticker, startTime, endTime) => {
       const wallet = this._walletController.getWallet(ticker);
+      if (!wallet)
+        return [];
       const txs = await wallet.getTransactions(startTime, endTime);
       return sanitize(txs, Blacklist, Whitelist);
     });
     this._proc.handle(apiConstants.wallet_getAddresses, (evt, ticker) => {
-      return this._walletController.getWallet(ticker).getAddresses();
+      const wallet = this._walletController.getWallet(ticker);
+      return wallet ? wallet.getAddresses() : [];
     });
     this._proc.handle(apiConstants.wallet_generateNewAddress, (evt, ticker) => {
-      return this._walletController.getWallet(ticker).generateNewAddress();
+      const wallet = this._walletController.getWallet(ticker);
+      return wallet ? wallet.generateNewAddress() : null;
     });
     this._proc.handle(apiConstants.wallet_getCachedUnspent, async (evt, ticker, cacheExpirySeconds) => {
       const wallet = this._walletController.getWallet(ticker);
+      if (!wallet)
+        return [];
       const utxos = await wallet.getCachedUnspent(cacheExpirySeconds);
       return sanitize(utxos, Blacklist, Whitelist);
     });
     this._proc.handle(apiConstants.wallet_send, (evt, ticker, recipients) => {
+      const wallet = this._walletController.getWallet(ticker);
+      if (!wallet)
+        return false;
       recipients = recipients.map(r => new Recipient(r));
-      return this._walletController.getWallet(ticker).send(recipients);
+      return wallet.send(recipients);
     });
     this._proc.on(apiConstants.wallet_getExplorerLink, (evt, ticker) => {
-      evt.returnValue = this._walletController.getWallet(ticker).getExplorerLink();
+      const wallet = this._walletController.getWallet(ticker);
+      evt.returnValue = wallet ? wallet.getExplorerLink() : '';
     });
     this._proc.on(apiConstants.wallet_getExplorerLinkForTx, (evt, ticker, tx) => {
-      evt.returnValue = this._walletController.getWallet(ticker).getExplorerLinkForTx(tx);
+      const wallet = this._walletController.getWallet(ticker);
+      evt.returnValue = wallet ? wallet.getExplorerLinkForTx(tx) : '';
     });
     this._proc.on(apiConstants.wallet_getWebsiteLink, (evt, ticker) => {
-      evt.returnValue = this._walletController.getWallet(ticker).getWebsiteLink();
+      const wallet = this._walletController.getWallet(ticker);
+      evt.returnValue = wallet ? wallet.getWebsiteLink() : '';
     });
   }
 

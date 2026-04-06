@@ -8,9 +8,8 @@ const {contextBridge, ipcRenderer, webFrame} = require('electron');
  * When updating the api here be sure to update: server/modules/api.js
  */
 export const apiConstants = {
-  env_CC_WALLET_PASS: 'env_CC_WALLET_PASS',
-  env_CC_WALLET_AUTOLOGIN: 'env_CC_WALLET_AUTOLOGIN',
-  env_reset_CC_WALLET_PASS: 'env_reset_CC_WALLET_PASS',
+  env_shouldAutoLogin: 'env_shouldAutoLogin',
+  env_resetAutoLogin: 'env_resetAutoLogin',
 
   general_isDev: 'general_isDev', // synchronous
   general_getError: 'general_getError',
@@ -103,14 +102,11 @@ export const apiConstants = {
 
 // ENV var api
 const env_API = {
-  [apiConstants.env_CC_WALLET_PASS]: async () => {
-    return ipcRenderer.invoke(apiConstants.env_CC_WALLET_PASS);
+  [apiConstants.env_shouldAutoLogin]: async () => {
+    return ipcRenderer.invoke(apiConstants.env_shouldAutoLogin);
   },
-  [apiConstants.env_CC_WALLET_AUTOLOGIN]: async () => {
-    return ipcRenderer.invoke(apiConstants.env_CC_WALLET_AUTOLOGIN);
-  },
-  [apiConstants.env_reset_CC_WALLET_PASS]: () => {
-    ipcRenderer.send(apiConstants.env_reset_CC_WALLET_PASS);
+  [apiConstants.env_resetAutoLogin]: () => {
+    ipcRenderer.send(apiConstants.env_resetAutoLogin);
   },
 };
 

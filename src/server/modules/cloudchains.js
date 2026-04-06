@@ -132,6 +132,13 @@ class CloudChains {
    * @private
    */
   _defaultAddressCount = 30;
+  /**
+   * Holds the wallet password from CC_WALLET_PASS env var.
+   * Cleared after first use for security.
+   * @type {string|null}
+   * @private
+   */
+  _envPassword = null;
 
   /**
    * Default path function for cloudchains installations.
@@ -295,6 +302,22 @@ class CloudChains {
     if (!s || !_.isString(s))
       return null;
     return s;
+  }
+
+  /**
+   * Store the wallet password from CC_WALLET_PASS env var.
+   * Called once at startup by the main process.
+   * @param password {string}
+   */
+  setEnvPassword(password) {
+    this._envPassword = password;
+  }
+
+  /**
+   * Clear the stored env password. Called after auto-login or on reset.
+   */
+  clearEnvPassword() {
+    this._envPassword = null;
   }
 
   /**
@@ -546,7 +569,10 @@ class CloudChains {
           resolve(value);
         };
 
-        const args = password ? ['--password'] : [];
+        // Use env password if caller provided none and env password is available
+        const effectivePassword = (!password && this._envPassword) ? this._envPassword : password;
+
+        const args = effectivePassword ? ['--password'] : [];
         let cli;
         try {
           cli = this._spawn(
@@ -555,7 +581,7 @@ class CloudChains {
             {
               detached: false,
               windowsHide: true,
-              env: this._getDaemonEnv(password),
+              env: this._getDaemonEnv(effectivePassword),
             }
           );
         } catch (err) {
@@ -563,6 +589,9 @@ class CloudChains {
           settle(false);
           return;
         }
+
+        // One-shot use: clear env password after successful spawn
+        if (effectivePassword) this._envPassword = null;
 
         let sawBadPassword = false;
         let sawSelection = false;
@@ -609,7 +638,7 @@ class CloudChains {
           this._cli = null;
           const code = cli.exitCode;
           logger.info(`startSPV daemon exited with code ${code}`);
-          if (sawBadPassword || (!password && sawSelection)) {
+          if (sawBadPassword || (!effectivePassword && sawSelection)) {
             settle(false);
           } else if (code === DAEMON_EXIT.SUCCESS) {
             this.isWalletRPCRunning()

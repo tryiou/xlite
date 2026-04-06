@@ -69,6 +69,7 @@ export default [
         Path2D: 'readonly',
         navigator: 'readonly',
         Blob: 'readonly',
+        URL: 'readonly',
         localStorage: 'readonly',
       },
     },
