@@ -71,3 +71,4 @@ package-lock.json
 .history/
 .aider*
 .vscode*
+test-*.txt
