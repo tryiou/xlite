@@ -62,6 +62,7 @@ const fakeExecFile = () => {
 export class FakeSpawn {
   stdoutCallbacks = {};
   stderrCallbacks = {};
+  exitCallbacks = [];
   killed = false;
   _spawnedProcess = null;
 
@@ -79,6 +80,10 @@ export class FakeSpawn {
       if (func)
         self.stderrCallbacks[eventName].push(func);
     }).bind(this);
+    const exitOn = (eventName, func) => {
+      if (eventName === 'exit')
+        self.exitCallbacks.push(func);
+    };
     this._spawnedProcess = {
       // properties used by the CC CLI methods
       stdout: {
@@ -95,20 +100,20 @@ export class FakeSpawn {
       kill: () => {
         this.killed = true;
       },
+      on: exitOn,
       exitCode: null
     };
     return this._spawnedProcess;
   }
 
-  // Trigger stdout close handlers with an exit code.
-  // Sets exitCode on the spawned process (matching real Node.js behavior
-  // where cli.exitCode is available after stdout 'close' fires).
-  // Snapshots handlers before iterating so newly-registered handlers
-  // (e.g. from getCCMnemonic called inside a close handler) don't fire
-  // in the same iteration.
+  // Trigger process-level 'exit' handlers, then stdout 'close' handlers.
+  // Sets exitCode on the spawned process (matching real Node.js behavior).
   close(code = 0) {
     if (this._spawnedProcess)
       this._spawnedProcess.exitCode = code;
+    const exitCbs = [...this.exitCallbacks];
+    for (const cb of exitCbs)
+      cb(code);
     const cbs = this.stdoutCallbacks['close'];
     if (cbs) {
       const snapshot = [...cbs];
@@ -140,6 +145,7 @@ export class FakeSpawn {
       delete this.stdoutCallbacks[key];
     for (const key of Object.keys(this.stderrCallbacks))
       delete this.stderrCallbacks[key];
+    this.exitCallbacks = [];
     this.killed = false;
     this._spawnedProcess = null;
   }

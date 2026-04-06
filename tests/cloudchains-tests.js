@@ -376,7 +376,7 @@ describe('CloudChains Test Suite', function() {
             .then(resolve)
             .catch(reject);
           fakeSpawn.stderr('data', 'error');
-          fakeSpawn.stdout('close', 1);
+          fakeSpawn.close(1);
         });
         success.should.be.false();
       }
