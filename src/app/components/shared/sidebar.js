@@ -13,9 +13,7 @@ import {publicPath} from '../../util/public-path-r';
 import { activeViews, SIDEBAR_WIDTH } from '../../constants';
 import { IconInput } from './inputs';
 import Wallet from '../../types/wallet-r';
-import { getSrcFromSrcSet, walletSorter } from '../../util';
-
-const {api} = window;
+import { getSrcFromSrcSet } from '../../util';
 
 const SidebarFilterableList = ({ placeholder, items, onClick = () => {} }) => {
 

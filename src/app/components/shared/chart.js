@@ -68,7 +68,7 @@ export default class Chart extends React.Component {
     const h = defaultHeight * window.devicePixelRatio;
     // Determine extra x-axis padding required. Find the length of largest amount (string)
     let largestAmount = 0;
-    for (const [time, amount] of chartData) {
+    for (const [_time, amount] of chartData) {
       if (amount > largestAmount)
         largestAmount = amount;
     }
@@ -169,7 +169,7 @@ export default class Chart extends React.Component {
       const sx = xAxisPadding + data[0][2];
       const sy = yAxisTopPadding + data[0][3];
       chart.moveTo(sx, sy);
-      for (const [a, b, x, y] of data)
+      for (const [_a, _b, x, y] of data)
         chart.lineTo(xAxisPadding + x, yAxisTopPadding + y);
 
       // Draw the simple chart and return

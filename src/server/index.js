@@ -108,7 +108,6 @@ const makeError = (title, msg) => {
 
 let confController = null;
 let walletController = null;
-let api = null;
 const pricing = new Pricing(Pricing.defaultPricingApi); // create pricing manager
 
 const startup = async () => {
@@ -247,8 +246,8 @@ app.on('ready', async () => {
   };
 
   // displayFatalError = makeError('Test', '123'); // force debug error screen
-  // Create the api
-  api = new Api(storage, app, ipcMain, displayFatalError,
+  // Create the api — instance registers IPC handlers as a side effect
+  new Api(storage, app, ipcMain, displayFatalError,
     cloudChains,
     confController,
     walletController,

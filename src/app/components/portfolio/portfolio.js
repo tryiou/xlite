@@ -11,7 +11,6 @@ import Chart from '../shared/chart';
 import {Column, Row} from '../shared/flex';
 import {multiplierForCurrency} from '../../util';
 import { SIDEBAR_WIDTH, balanceFilters, localStorageKeys } from '../../constants';
-import moment from 'moment';
 import $ from 'jquery';
 
 const Portfolio = ({ windowWidth, altCurrency, currencyMultipliers, balanceOverTime }) => {

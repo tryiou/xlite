@@ -226,8 +226,9 @@ class Wallet {
     const unspent = await this.getCachedUnspent(0);
     let total = bignumber(0);
     let spendable = bignumber(0);
-    for(let { amount, spendable: isSpendable } of unspent) {
-      amount = bignumber(amount);
+    for(const utxo of unspent) {
+      const amount = bignumber(utxo.amount);
+      const isSpendable = utxo.spendable;
       if (isSpendable)
         spendable = math.add(spendable, amount);
       total = math.add(total, amount);

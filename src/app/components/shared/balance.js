@@ -22,13 +22,11 @@ const math = create(all, {
 });
 const { bignumber } = math;
 
-const {api} = window;
-
 let Balance = ({ showCoinDetails = false, activeWallet, altCurrency, wallets, balances, currencyMultipliers, style = {}, pricing }) => {
 
   if(showCoinDetails) { // coin details
   const wallet = activeWallet ? wallets.find(w => w.ticker === activeWallet) : null;
-  const [ total, spendable ] = wallet && balances.has(wallet.ticker) ? balances.get(wallet.ticker) : ['0', '0'];
+  const [ total, _spendable ] = wallet && balances.has(wallet.ticker) ? balances.get(wallet.ticker) : ['0', '0'];
 
   if(!wallet) return <div className={'lw-balance-outer-container'} />;
 
@@ -68,7 +66,7 @@ let Balance = ({ showCoinDetails = false, activeWallet, altCurrency, wallets, ba
     let allCoinBtc = bignumber(0);
     for (const wallet of wallets) {
       const currencyMultiplier = multiplierForCurrency(wallet.ticker, BTC, currencyMultipliers);
-      const [ total, spendable ] = balances.has(wallet.ticker) ? balances.get(wallet.ticker) : ['0', '0'];
+      const [ total, _spendable ] = balances.has(wallet.ticker) ? balances.get(wallet.ticker) : ['0', '0'];
       const coinBtc = math.multiply(bignumber(total), bignumber(currencyMultiplier));
       allCoinBtc = math.add(allCoinBtc, coinBtc);
     }

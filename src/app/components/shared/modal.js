@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 import PropTypes from 'prop-types';
-import React, {useEffect} from 'react';
+import React, {useEffect, useRef} from 'react';
 import $ from 'jquery';
 import Localize from './localize';
 import {ESC_KEY_CODE} from '../../constants';
@@ -33,12 +33,17 @@ ModalBody.propTypes = {
 
 export const Modal = ({ children, showBackButton = false, disableCloseOnOutsideClick = false, onBack = () => {}, onClose = () => {} }) => {
   const overlay = React.createRef();
-  const onEscKey = event => {
-    if (event.keyCode === ESC_KEY_CODE) {
-      onClose();
-    }
-  };
-  useEffect( () => {
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const onEscKey = event => {
+      if (event.keyCode === ESC_KEY_CODE) {
+        onCloseRef.current();
+      }
+    };
     document.addEventListener('keydown', onEscKey, false);
     return () => {
       document.removeEventListener('keydown', onEscKey, false);

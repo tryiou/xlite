@@ -29,30 +29,35 @@ const SecurityModal = ({ cloudChains, hideSecurityModal }) => {
 
   const onSubmit = async e => {
     e.preventDefault();
+    setProcessing(true);
 
-    if (!cloudChains) {
-      const title = Localize.text('Issue', 'security modal');
-      const msg = Localize.text('The CloudChains daemon is not ready', 'security modal');
-      await Alert.error(title, msg);
-      return;
-    }
     try {
-      if (!await cloudChains.changePassword(oldPassword, password)) {
+      if (!cloudChains) {
         const title = Localize.text('Issue', 'security modal');
-        const msg = Localize.text('Failed to change the password, is the CloudChains wallet daemon running?', 'security modal');
+        const msg = Localize.text('The CloudChains daemon is not ready', 'security modal');
         await Alert.error(title, msg);
         return;
       }
-    } catch (err) {
-      await Alert.error(Localize.text('Issue', 'security modal'), Localize.text(err.message, 'security modal'));
-      return;
+      try {
+        if (!await cloudChains.changePassword(oldPassword, password)) {
+          const title = Localize.text('Issue', 'security modal');
+          const msg = Localize.text('Failed to change the password, is the CloudChains wallet daemon running?', 'security modal');
+          await Alert.error(title, msg);
+          return;
+        }
+      } catch (err) {
+        await Alert.error(Localize.text('Issue', 'security modal'), Localize.text(err.message, 'security modal'));
+        return;
+      }
+
+      hideSecurityModal();
+
+      const title = Localize.text('Security', 'security modal');
+      const msg = Localize.text('Password updated successfully. Mnemonic re-encrypted', 'security modal');
+      await Alert.info(title, msg);
+    } finally {
+      setProcessing(false);
     }
-
-    hideSecurityModal();
-
-    const title = Localize.text('Security', 'security modal');
-    const msg = Localize.text('Password updated successfully. Mnemonic re-encrypted', 'security modal');
-    await Alert.info(title, msg);
   };
 
   const styles = {

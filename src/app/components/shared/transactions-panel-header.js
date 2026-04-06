@@ -8,11 +8,7 @@ import * as appActions from '../../actions/app-actions';
 import WalletController from '../../modules/wallet-controller-r';
 import Wallet from '../../types/wallet-r';
 import PanelFilters from './button-filters';
-import FilterMenu from './filter-menu';
-import { SquareButton } from './buttons';
 import {activeViews, transactionFilters} from '../../constants';
-import { publicPath } from '../../util/public-path-r';
-import {walletSorter} from '../../util';
 import {Map as IMap} from 'immutable';
 import Localize from './localize';
 import Spinner from './spinner';
@@ -21,7 +17,6 @@ let TransactionsPanelHeader = ({ selectedFilter, onTransactionFilter, walletCont
 
   const store = useStore();
   const [transactionFilter] = useState(selectedFilter || transactionFilters.all);
-  const [filterMenuActive, setFilterMenuActive] = useState(false);
   const [selectedTicker, setSelectedTicker] = useState(null);
 
   useEffect(() => {
@@ -43,17 +38,6 @@ let TransactionsPanelHeader = ({ selectedFilter, onTransactionFilter, walletCont
     } else {
       walletController.updateAllBalancesStream(true, then);
     }
-  };
-
-  const onFilterButton = () => {
-    setFilterMenuActive(!filterMenuActive);
-  };
-
-  const onFilterMenuClick = ticker => {
-    setSelectedTicker(ticker);
-    setFilterMenuActive(false);
-    setActiveWallet(ticker);
-    setActiveView(activeViews.COIN_TRANSACTIONS);
   };
 
   const isCoinTransactions = activeView === activeViews.COIN_TRANSACTIONS;

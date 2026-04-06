@@ -51,7 +51,7 @@ export const sanitizeObj = (o, blacklist, whitelist) => {
     for (const item of o)
       sanitizeObj(item, blacklist, whitelist);
   } else if (o instanceof Map || o instanceof IMap) {
-    for (const [key, value] of o)
+    for (const [_key, value] of o)
       sanitizeObj(value, blacklist, whitelist);
   } else {
     for (const key in o) {

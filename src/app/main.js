@@ -18,7 +18,6 @@ import CloudChains from './modules/cloudchains-r';
 import ConfController from './modules/conf-controller-r';
 import domStorage from './modules/dom-storage';
 import Localize from './components/shared/localize';
-import {logger} from './modules/logger-r';
 import LWDB from './modules/lwdb';
 import Pricing from './modules/pricing-r';
 import TokenManifest from './modules/token-manifest';

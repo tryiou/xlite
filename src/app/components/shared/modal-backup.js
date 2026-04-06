@@ -29,37 +29,42 @@ const BackupModal = ({ hideBackupModal, cloudChains }) => {
 
   const onDownloadFileClick = async e => {
     e.preventDefault();
+    setProcessing(true);
 
-    if (password.length === 0) {
-      const title = Localize.text('Issue', 'backup modal');
-      const msg = Localize.text('Please enter your password', 'backup modal');
-      await Alert.error(title, msg);
-      return;
-    }
-    if (!cloudChains) {
-      const title = Localize.text('Issue', 'backup modal');
-      const msg = Localize.text('The CloudChains daemon is not ready', 'backup modal');
-      await Alert.error(title, msg);
-      return;
-    }
     try {
-      if (!await cloudChains.matchesStoredPassword(password)) {
+      if (password.length === 0) {
         const title = Localize.text('Issue', 'backup modal');
-        const msg = Localize.text('Incorrect Password', 'backup modal');
+        const msg = Localize.text('Please enter your password', 'backup modal');
         await Alert.error(title, msg);
         return;
       }
-    } catch (err) {
-      await Alert.error(Localize.text('Issue', 'backup modal'), Localize.text(err.message, 'backup modal'));
-      return;
-    }
+      if (!cloudChains) {
+        const title = Localize.text('Issue', 'backup modal');
+        const msg = Localize.text('The CloudChains daemon is not ready', 'backup modal');
+        await Alert.error(title, msg);
+        return;
+      }
+      try {
+        if (!await cloudChains.matchesStoredPassword(password)) {
+          const title = Localize.text('Issue', 'backup modal');
+          const msg = Localize.text('Incorrect Password', 'backup modal');
+          await Alert.error(title, msg);
+          return;
+        }
+      } catch (err) {
+        await Alert.error(Localize.text('Issue', 'backup modal'), Localize.text(err.message, 'backup modal'));
+        return;
+      }
 
-    const storedMnemonic = await cloudChains.getDecryptedMnemonic(password);
-    const blob = new Blob([storedMnemonic], { type: 'text/plain;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.download = 'xlite_backup.txt';
-    link.click();
+      const storedMnemonic = await cloudChains.getDecryptedMnemonic(password);
+      const blob = new Blob([storedMnemonic], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = 'xlite_backup.txt';
+      link.click();
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const styles = {

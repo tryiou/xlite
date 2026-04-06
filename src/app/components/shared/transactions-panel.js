@@ -12,7 +12,7 @@ import moment from 'moment';
 import AssetWithImage from './asset-with-image';
 import { activeViews, MAX_DECIMAL_PLACE, altCurrencies, altCurrencySymbol } from '../../constants';
 import {Map as IMap} from 'immutable';
-import { multiplierForCurrency, currencyLinter, truncate, removeTrailingZeroes } from '../../util';
+import { multiplierForCurrency, currencyLinter, truncate } from '../../util';
 import {publicPath} from '../../util/public-path-r';
 import { all, create } from 'mathjs';
 import Wallet from '../../types/wallet-r';

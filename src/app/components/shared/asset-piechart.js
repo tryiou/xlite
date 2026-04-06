@@ -106,7 +106,6 @@ export default class AssetPieChart extends React.Component {
     const h = w;
     const padding = this._pix(lineWidth);
     const chartWidth = w - padding*2;
-    const chartHeight = h - padding*2;
 
     // Retina/HDPI screen support (requires canvas.scaled below)
     canvas.width = w;

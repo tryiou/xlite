@@ -12,7 +12,7 @@ import * as appActions from '../../actions/app-actions';
 import { activeViews, MAX_DECIMAL_PLACE, altCurrencySymbol, altCurrencies } from '../../constants';
 import { Column } from './flex';
 import PercentBar from './percent-bar';
-import { multiplierForCurrency, removeTrailingZeroes, truncate, walletSorter } from '../../util';
+import { multiplierForCurrency, truncate, walletSorter } from '../../util';
 import {Map as IMap} from 'immutable';
 import Wallet from '../../types/wallet-r';
 import { all, create } from 'mathjs';
@@ -67,12 +67,6 @@ const AssetsOverviewPanel = ({ hidePercentBar = false, hideTicker = false, hideV
         pricingChartData.set(key, sortedData.slice(0, 7)); // 1 week of data
     }
   }
-
-  const styles = {
-    inactiveFooterButton: {
-      color: '#c8cdd6'
-    }
-  };
 
   const volumeInAltCurrency = ticker => {
     const volume = bignumber(pricingController.getVolume(ticker, altCurrency));

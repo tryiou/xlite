@@ -230,7 +230,7 @@ class WalletController {
     // based on user's timeframe filter.
     const coinBalances = new Map();
     const data = await this.getTransactions();
-    for (let [ticker, transactions] of data) {
+    for (const [ticker, transactions] of data) {
       if (transactions.length === 0)
         continue; // skip, no transactions
 
@@ -257,7 +257,7 @@ class WalletController {
           runningBalance += Math.abs(tx.amountWithFees()) * multiplier;
       }
       if (!txRemaining)
-        transactions = []; // remove because all txs have been processed
+        transactions.length = 0; // remove because all txs have been processed
 
       // Only advance the search index if a transaction falls within the time period
       const balances = [[startTime, runningBalance]]; // include the starting balance
@@ -286,7 +286,7 @@ class WalletController {
     const periods = coinBalances.get(coinBalances.keys().next().value).length;
     for (let i = 0; i < periods; i++) {
       let runningBalance = 0;
-      for (const [ticker, balances] of coinBalances)
+      for (const [_ticker, balances] of coinBalances)
         runningBalance += balances[i][1]; // [1] = balance in currency
       allBalances.push([startTime + i * period, runningBalance]);
     }

@@ -26,8 +26,8 @@ const TransactionsPanelTable = ({
   const [transactions, setTransactions] = useState([]);
   const walletLookup = new Map(wallets.map(t => [t.ticker, t]));
   const sortedWallets = useMemo(() => activeWallet
-  ? [wallets.find(w => w.ticker === activeWallet)]
-  : wallets.sort(walletSorter(balances)), [wallets, activeWallet]);
+    ? [wallets.find(w => w.ticker === activeWallet)]
+    : [...wallets].sort(walletSorter(balances)), [wallets, activeWallet, balances]);
 
   // ToDo: enable Select, Label, and Date columns when available
   const hiddenFeature = true;
