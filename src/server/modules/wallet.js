@@ -86,6 +86,14 @@ class Wallet {
   _cachedUtxos = {fetchTime: 0, utxos: []};
 
   /**
+   * Stores a pending promise for an in-flight unspent fetch.
+   * Prevents duplicate concurrent RPC calls.
+   * @type {Promise<RPCUnspent[]>|null}
+   * @private
+   */
+  _pendingUnspentFetch = null;
+
+  /**
    * Stores cached addresses and last time they were fetched.
    * @type {{fetchTime: number, addresses: string[]}}
    * @private
@@ -322,15 +330,23 @@ class Wallet {
       return _.cloneDeep(this._cachedUtxos.utxos);
     }
 
-    try {
-      const utxos = await this.rpc.listUnspent();
-      this._cachedUtxos.fetchTime = now;
-      this._cachedUtxos.utxos = utxos;
-    } catch(err) {
-      logger.error(`failed to list utxos for ${this.ticker}`, err);
-    }
+    if (this._pendingUnspentFetch)
+      return this._pendingUnspentFetch;
 
-    return _.cloneDeep(this._cachedUtxos.utxos);
+    this._pendingUnspentFetch = (async () => {
+      try {
+        const utxos = await this.rpc.listUnspent();
+        this._cachedUtxos.fetchTime = unixTime();
+        this._cachedUtxos.utxos = utxos;
+      } catch(err) {
+        logger.error(`failed to list utxos for ${this.ticker}`, err);
+      } finally {
+        this._pendingUnspentFetch = null;
+      }
+      return _.cloneDeep(this._cachedUtxos.utxos);
+    })();
+
+    return this._pendingUnspentFetch;
   }
 
   /**

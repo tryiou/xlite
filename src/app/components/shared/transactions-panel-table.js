@@ -44,7 +44,7 @@ const TransactionsPanelTable = ({
         .filter(([ticker, txs]) => txs.length > 0)
         .reduce((arr, [ticker, txs]) => arr.concat(txs.map(tx => [ticker, new RPCTransaction(tx, ticker)])), [])
       ));
-  }, [activeWallet, sortedWallets, wallets, balances]);
+  }, [sortedWallets]);
 
   const styles = {
     text: {
