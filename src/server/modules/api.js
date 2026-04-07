@@ -154,6 +154,30 @@ class Api {
   }
 
   /**
+   * Check if a hostname is unsafe (private, loopback, or malformed).
+   * @param hostname {string}
+   * @returns {boolean}
+   * @private
+   */
+  _isUnsafeHostname(hostname) {
+    if (!hostname || hostname.includes('..')) return true;
+    if (hostname === 'localhost') return true;
+    if (hostname === '[::1]') return true;
+    if (hostname.startsWith('[fc') || hostname.startsWith('[fd')) return true;
+    if (hostname.startsWith('[fe80')) return true;
+    if (hostname.startsWith('[::ffff:')) return true;
+    const parts = hostname.split('.').map(Number);
+    if (parts.length === 4 && parts.every(p => !isNaN(p))) {
+      if (parts[0] === 127) return true;
+      if (parts[0] === 10) return true;
+      if (parts[0] === 192 && parts[1] === 168) return true;
+      if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+      if (parts[0] === 0) return true;
+    }
+    return false;
+  }
+
+  /**
    * Validate that a value is a non-empty string.
    * @param value {*}
    * @param name {string} Parameter name for logging
@@ -240,9 +264,16 @@ class Api {
       if (this._allowOpenExternalLinks && typeof url === 'string') {
         try {
           const parsed = new URL(url);
-          if (parsed.protocol === 'https:' && parsed.hostname && !parsed.hostname.includes('..')) {
-            electron.shell.openExternal(url);
+          if (parsed.protocol !== 'https:') {
+            logger.error(`Non-https URL rejected: ${url}`);
+            return;
           }
+          const hostname = parsed.hostname.toLowerCase();
+          if (this._isUnsafeHostname(hostname)) {
+            logger.error(`Unsafe hostname rejected: ${hostname}`);
+            return;
+          }
+          electron.shell.openExternal(url);
         } catch (_e) {
           logger.error(`Invalid URL rejected: ${url}`);
         }
