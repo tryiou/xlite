@@ -115,7 +115,8 @@ class WalletController {
           r.push(new Wallet(wallet, this._api, this._domStorage, this._db));
       }
       return r;
-    } catch (_err) {
+    } catch (err) {
+      logger.error('Failed to get wallets', err);
       return [];
     }
   }
@@ -131,7 +132,8 @@ class WalletController {
       if (!wallet)
         return null;
       return new Wallet(wallet, this._api, this._domStorage, this._db);
-    } catch (_err) {
+    } catch (err) {
+      logger.error('Failed to get wallet', err);
       return null;
     }
   }
@@ -149,7 +151,8 @@ class WalletController {
           r.push(new Wallet(wallet, this._api, this._domStorage, this._db));
       }
       return r;
-    } catch (_err) {
+    } catch (err) {
+      logger.error('Failed to get enabled wallets', err);
       return [];
     }
   }
@@ -162,7 +165,8 @@ class WalletController {
     try {
       const balances = await this._api.walletController_getBalances();
       return new Map(balances);
-    } catch (_err) {
+    } catch (err) {
+      logger.error('Failed to get balances', err);
       return new Map();
     }
   }
@@ -230,10 +234,11 @@ class WalletController {
     // based on user's timeframe filter.
     const coinBalances = new Map();
     const data = await this.getTransactions();
-    for (const [ticker, transactions] of data) {
-      if (transactions.length === 0)
+    for (const [ticker, txs] of data) {
+      if (txs.length === 0)
         continue; // skip, no transactions
 
+      let transactions = [...txs];
       // Currency multiplier for ticker
       const multiplier = multiplierForCurrency(ticker, currency, currencyMultipliers);
 
@@ -246,8 +251,7 @@ class WalletController {
       for (let i = 0; i < transactions.length; i++) {
         const tx = transactions[i];
         if (tx.time >= startTime) {
-          // remove all items up to index
-          transactions.splice(0, i);
+          transactions = transactions.slice(i);
           txRemaining = true;
           break; // done, sorted array ensures nothing missing
         }
@@ -257,7 +261,7 @@ class WalletController {
           runningBalance += Math.abs(tx.amountWithFees()) * multiplier;
       }
       if (!txRemaining)
-        transactions.length = 0; // remove because all txs have been processed
+        transactions = [];
 
       // Only advance the search index if a transaction falls within the time period
       const balances = [[startTime, runningBalance]]; // include the starting balance
@@ -395,8 +399,8 @@ class WalletController {
       const data = new Map(!_.isNil(txns) ? txns.entries() : null);
       data.set(wallet.ticker, transactions);
       store.dispatch(action(IMap(data)));
-    } catch (_err) {
-      // fail silently
+    } catch (err) {
+      logger.error('Failed to dispatch transactions for ticker', err);
     }
   }
 
@@ -436,7 +440,7 @@ class WalletController {
       const priceData = await pricingController.updatePricing(tickers, ['USD'], expiry);
       prices = new IMap(priceData);
     } catch (e) {
-      logger.error('failed initial pricing update', e.message);
+      logger.error('Failed initial pricing update', e);
     }
     return prices;
   }
@@ -448,8 +452,8 @@ class WalletController {
   async updatePriceMultipliers() {
     try {
       await this._api.walletController_updatePriceMultipliers();
-    } catch (_err) {
-      // TODO fail silently?
+    } catch (err) {
+      logger.error('Failed to update price multipliers', err);
     }
   }
 
@@ -475,8 +479,7 @@ class WalletController {
       if (this._dispatchLoadingTransactions)
       this._dispatchLoadingTransactions(false);
     } catch (err) {
-      logger.error(err);
-      // TODO fail silently?
+      logger.error('Failed to update balance info', err);
       if (this._dispatchLoadingTransactions)
       this._dispatchLoadingTransactions(false);
     }
@@ -499,7 +502,7 @@ class WalletController {
       for (const wallet of wallets)
         updateRequests.push(wallet.updateTransactions(fromZero));
     } catch (e) {
-      logger.error(e);
+      logger.error('Failed to update all balances', e);
     }
     return new Promise(resolve => {
       if(uiTimeout > 0)

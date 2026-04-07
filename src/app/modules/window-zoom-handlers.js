@@ -57,10 +57,17 @@ const showZoomLevel = percent => {
   const id = uuid.v4();
   const styles = 'opacity:.9;background-color:#fff;color:#000;width:70px;height:30px;line-height:30px;font-size:14px;text-align:center;position:fixed;right:0;top:0;z-index:10000;';
   const className = 'js-zoomLevelContainer';
-  $(`.${className}`).remove();
-  $('body').append(`<div id="${id}" class="${className}" style="${styles}">${percent.toFixed(0)}%</div>`);
+  const existing = document.querySelector(`.${className}`);
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = className;
+  div.style.cssText = styles;
+  div.textContent = `${percent.toFixed(0)}%`;
+  document.body.appendChild(div);
   setTimeout(() => {
-    $(`#${id}`).remove();
+    const el = document.getElementById(id);
+    if (el) el.remove();
   }, 2000);
 };
 

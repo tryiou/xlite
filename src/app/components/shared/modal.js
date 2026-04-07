@@ -3,7 +3,6 @@
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 import PropTypes from 'prop-types';
 import React, {useEffect, useRef} from 'react';
-import $ from 'jquery';
 import Localize from './localize';
 import {ESC_KEY_CODE} from '../../constants';
 
@@ -50,7 +49,7 @@ export const Modal = ({ children, showBackButton = false, disableCloseOnOutsideC
     };
   }, []);
   return (
-    <div ref={overlay} className={'lw-modal-overlay'} onClick={e => $(e.target).hasClass('lw-modal-overlay') && !disableCloseOnOutsideClick ? onClose() : null}>
+    <div ref={overlay} className={'lw-modal-overlay'} onClick={e => e.target.classList.contains('lw-modal-overlay') && !disableCloseOnOutsideClick ? onClose() : null}>
       <div className={'lw-modal-container'}>
         {showBackButton ?
           <a className={'lw-back-btn'} href={'#'} onClick={e => {

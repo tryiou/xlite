@@ -73,7 +73,7 @@ const TransactionsPanel = ({ selectable = false, coinSpecificTransactions = fals
         }
         return true;
       })
-      .sort((a, b) => { // descending
+      .sort((a, b) => {
         const dateA = a[1].time;
         const dateB = b[1].time;
         return dateB - dateA;

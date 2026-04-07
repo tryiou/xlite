@@ -67,22 +67,14 @@ if(isDev) {
 
 const updateScrollbars = (innerWidth, innerHeight) => {
   if(innerWidth < MIN_UI_WIDTH) {
-    $('html').css({
-      overflowX: 'scroll'
-    });
+    document.documentElement.style.overflowX = 'scroll';
   } else {
-    $('html').css({
-      overflowX: 'hidden'
-    });
+    document.documentElement.style.overflowX = 'hidden';
   }
   if(innerHeight < MIN_UI_HEIGHT) {
-    $('html').css({
-      overflowY: 'scroll'
-    });
+    document.documentElement.style.overflowY = 'scroll';
   } else {
-    $('html').css({
-      overflowY: 'hidden'
-    });
+    document.documentElement.style.overflowY = 'hidden';
   }
 };
 
@@ -122,7 +114,7 @@ api.general_onUpdateDownloaded(async function(version) {
 
 // Add window event handlers
 window.addEventListener('paste', async function(e) {
-  const type = $(e.target).attr('type');
+  const type = e.target.getAttribute('type');
   if(type === 'password') {
     // a timeout is necessary to allow the paste event to take place before clearing the clipboard
     await timeout(10000);

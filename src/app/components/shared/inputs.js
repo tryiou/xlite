@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The Blocknet developers
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import Localize from './localize';
 import {publicPath} from '../../util/public-path-r';
@@ -76,22 +76,24 @@ CurrencyInput.propTypes = {
 const LoginInput = ({ type, className =  '', value, placeholder = '', hidden = false, autoFocus = false, setHidden, readOnly = false, onChange, onContextMenu }) => {
 
   const [ focused, setFocused ] = useState(false);
-
-  let node;
+  const inputRef = useRef(null);
 
   const onHideShowClick = () => {
     setHidden(!hidden);
     setTimeout(() => {
-      const $input = $(node).focus();
-      const val = $input.val();
-      $input[0].setSelectionRange(val.length, val.length);
+      const input = inputRef.current;
+      if (input) {
+        input.focus();
+        const val = input.value;
+        input.setSelectionRange(val.length, val.length);
+      }
     }, 0);
   };
 
   return (
     <div className={`lw-login-input-container ${focused ? 'active' : ''}`} style={{marginBottom: 10}}>
       <input placeholder={placeholder}
-             ref={n => n ? node = n : null}
+             ref={inputRef}
              className={`lw-login-input ${className}`}
              value={value}
              type={type === 'password' && hidden ? 'password' : type === 'password' ? 'text' : type}

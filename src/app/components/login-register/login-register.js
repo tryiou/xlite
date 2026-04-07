@@ -23,13 +23,17 @@ const { api } = window;
 const LoginPasswordSubmitInput = ({ hidden, setHidden, password, readOnly = false, setPassword, onContextMenu, onSubmit }) => {
 
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef(null);
 
   const onHideShowClick = () => {
     setHidden(!hidden);
     setTimeout(() => {
-      const $input = $('#js-login-input').focus();
-      const val = $input.val();
-      $input[0].setSelectionRange(val.length, val.length);
+      const input = inputRef.current;
+      if (input) {
+        input.focus();
+        const val = input.value;
+        input.setSelectionRange(val.length, val.length);
+      }
     }, 0);
   };
 
@@ -41,6 +45,7 @@ const LoginPasswordSubmitInput = ({ hidden, setHidden, password, readOnly = fals
   return (
     <form className={`lw-login-input-container ${focused ? 'active' : ''}`} onSubmit={submitHandler}>
       <input placeholder={Localize.text('Enter password to unlock', 'login')}
+        ref={inputRef}
         id={'js-login-input'}
         className={'lw-login-input'}
         value={password}

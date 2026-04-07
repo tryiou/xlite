@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 import PropTypes from 'prop-types';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import domStorage from '../../modules/dom-storage';
 import Balance from '../shared/balance';
 import BalanceFilters from '../shared/button-filters';
@@ -11,13 +11,13 @@ import Chart from '../shared/chart';
 import {Column, Row} from '../shared/flex';
 import {multiplierForCurrency} from '../../util';
 import { SIDEBAR_WIDTH, balanceFilters, localStorageKeys } from '../../constants';
-import $ from 'jquery';
 
 const Portfolio = ({ windowWidth, altCurrency, currencyMultipliers, balanceOverTime }) => {
   const [chartData, setChartData] = useState([[0, 0]]);
   const initialChartScale = domStorage.getItem(localStorageKeys.ACTIVE_CHART_FILTER) || 'half-year';
   const [chartScale, setChartScale] = useState(initialChartScale);
   const [headCol2Width, setHeadCol2Width] = useState(0);
+  const portfolioHeaderRef = useRef(null);
 
   useEffect(() => {
     if (multiplierForCurrency('BTC', altCurrency, currencyMultipliers) > 0)
@@ -29,7 +29,8 @@ const Portfolio = ({ windowWidth, altCurrency, currencyMultipliers, balanceOverT
 
   useEffect(() => {
     setTimeout(() => {
-      const { clientWidth = 0 } = $('#js-portfolioHeaderCol2')[0] || {};
+      const element = portfolioHeaderRef.current;
+      const { clientWidth = 0 } = element ? element : {};
       setHeadCol2Width(clientWidth);
     }, 0);
   }, [windowWidth]);
@@ -51,7 +52,7 @@ const Portfolio = ({ windowWidth, altCurrency, currencyMultipliers, balanceOverT
         <Column>
           <Balance />
         </Column>
-        <Column id={'js-portfolioHeaderCol2'} style={{minWidth: 0, marginLeft: 30, marginRight: 20, height: 100, flexGrow: 1, overflowX: 'hidden'}}>
+        <Column ref={portfolioHeaderRef} id={'js-portfolioHeaderCol2'} style={{minWidth: 0, marginLeft: 30, marginRight: 20, height: 100, flexGrow: 1, overflowX: 'hidden'}}>
           {headCol2Width ?
             <Chart className={'lw-portfolio-chart'} chartData={chartData} currency={altCurrency} simple={false} simpleStrokeColor={'#ccc'}
                    hideAxes={true} defaultWidth={headCol2Width} defaultHeight={100}
