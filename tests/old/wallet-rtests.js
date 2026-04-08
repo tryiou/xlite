@@ -3,17 +3,17 @@
 import should from 'should';
 
 import './rtests';
-import domStorage from '../src/app/modules/dom-storage';
+import domStorage from '../../src/app/modules/dom-storage';
 import FakeApi, {resolvePromise} from './fake-api';
-import {localStorageKeys} from '../src/app/constants';
-import LWDB from '../src/app/modules/lwdb';
-import Recipient from '../src/app/types/recipient';
-import RPCTransaction from '../src/app/types/rpc-transaction';
-import {sanitize, Blacklist, Whitelist} from '../src/app/modules/api-r';
-import Token from '../src/app/types/token';
-import {unixTime} from '../src/app/util';
-import Wallet from '../src/app/types/wallet-r';
-import XBridgeInfo from '../src/app/types/xbridgeinfo';
+import {localStorageKeys} from '../../src/app/constants';
+import LWDB from '../../src/app/modules/lwdb';
+import Recipient from '../../src/app/types/recipient';
+import RPCTransaction from '../../src/app/types/rpc-transaction';
+import {sanitize, Blacklist, Whitelist} from '../../src/app/modules/api-r';
+import Token from '../../src/app/types/token';
+import {unixTime} from '../../src/app/util';
+import Wallet from '../../src/app/types/wallet-r';
+import XBridgeInfo from '../../src/app/types/xbridgeinfo';
 
 describe('Wallet Test Suite', function() {
   const appStorage = domStorage;

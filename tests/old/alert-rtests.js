@@ -2,9 +2,9 @@
 import 'should';
 
 import './rtests';
-import Alert from '../src/app/modules/alert';
+import Alert from '../../src/app/modules/alert';
 import { swalConfirmed, swalCanceled, setFakePromptInput } from './fake-swal';
-import Localize from '../src/app/components/shared/localize';
+import Localize from '../../src/app/components/shared/localize';
 
 describe('Alert static methods', function() {
 

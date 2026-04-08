@@ -4,7 +4,7 @@ import Dexie from 'dexie';
 import * as uuid from 'uuid';
 
 import './rtests';
-import { DBTable, DBQuery, db, TableConfig, DB } from '../src/app/modules/db';
+import { DBTable, DBQuery, db, TableConfig, DB } from '../../src/app/modules/db';
 
 class TestInitializer {
   constructor(data) {

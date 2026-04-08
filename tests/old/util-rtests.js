@@ -3,8 +3,8 @@
 import should from 'should';
 
 import './rtests';
-import {altCurrencies, altCurrencySymbol} from '../src/app/constants';
-import {resolveAll, timeout} from '../src/app/util';
+import {altCurrencies, altCurrencySymbol} from '../../src/app/constants';
+import {resolveAll, timeout} from '../../src/app/util';
 
 describe('Util Renderer Test Suite', function() {
   it('util.altCurrencies', async function() {

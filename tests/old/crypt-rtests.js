@@ -2,7 +2,7 @@
 import 'should';
 
 import './rtests';
-import { generateSalt, pbkdf2, Crypt } from '../src/app/modules/crypt';
+import { generateSalt, pbkdf2, Crypt } from '../../src/app/modules/crypt';
 
 const hexPatt = /^[0-9a-fA-F]+$/;
 

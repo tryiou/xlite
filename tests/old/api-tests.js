@@ -3,10 +3,10 @@
 import should from 'should';
 import {Map as IMap} from 'immutable';
 
-import Api from '../src/server/modules/api';
-import {sanitize, sanitizeObj, Blacklist, Whitelist} from '../src/app/modules/api-r';
-import SimpleStorage from '../src/server/modules/storage';
-import ContextMenu from '../src/server/modules/context-menu';
+import Api from '../../src/server/modules/api';
+import {sanitize, sanitizeObj, Blacklist, Whitelist} from '../../src/app/modules/api-r';
+import SimpleStorage from '../../src/server/modules/storage';
+import ContextMenu from '../../src/server/modules/context-menu';
 
 describe('Api Test Suite', function() {
   let storage;

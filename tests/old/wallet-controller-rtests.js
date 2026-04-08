@@ -7,19 +7,19 @@ import {Map as IMap} from 'immutable';
 import moment from 'moment';
 
 import './rtests';
-import * as appActions from '../src/app/actions/app-actions';
-import appReducer from '../src/app/reducers/app-reducer';
-import LWDB from '../src/app/modules/lwdb';
-import domStorage from '../src/app/modules/dom-storage';
+import * as appActions from '../../src/app/actions/app-actions';
+import appReducer from '../../src/app/reducers/app-reducer';
+import LWDB from '../../src/app/modules/lwdb';
+import domStorage from '../../src/app/modules/dom-storage';
 import FakeApi, {resolvePromise, txBLOCK, txBTC} from './fake-api';
-import {actions, localStorageKeys} from '../src/app/constants';
-import {multiplierForCurrency, oneDaySeconds, oneHourSeconds, oneMonthSeconds, oneWeekSeconds, unixTime} from '../src/app/util';
-import RPCTransaction from '../src/app/types/rpc-transaction';
-import TokenManifest from '../src/app/modules/token-manifest';
-import Wallet from '../src/app/types/wallet-r';
-import WalletController from '../src/app/modules/wallet-controller-r';
-import XBridgeInfo from '../src/app/types/xbridgeinfo';
-import {setTransactions} from '../src/app/actions/app-actions';
+import {actions, localStorageKeys} from '../../src/app/constants';
+import {multiplierForCurrency, oneDaySeconds, oneHourSeconds, oneMonthSeconds, oneWeekSeconds, unixTime} from '../../src/app/util';
+import RPCTransaction from '../../src/app/types/rpc-transaction';
+import TokenManifest from '../../src/app/modules/token-manifest';
+import Wallet from '../../src/app/types/wallet-r';
+import WalletController from '../../src/app/modules/wallet-controller-r';
+import XBridgeInfo from '../../src/app/types/xbridgeinfo';
+import {setTransactions} from '../../src/app/actions/app-actions';
 
 describe('WalletController Test Suite', function() {
   const storage = domStorage;

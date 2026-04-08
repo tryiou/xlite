@@ -8,18 +8,18 @@ const math = create(all, {
 });
 const { bignumber } = math;
 
-import CCWalletConf from '../src/app/types/ccwalletconf';
+import CCWalletConf from '../../src/app/types/ccwalletconf';
 import FakeRPCController from './fake-rpc-controller';
-import Recipient from '../src/app/types/recipient';
-import RPCController from '../src/server/modules/rpc-controller';
-import RPCTransaction from '../src/app/types/rpc-transaction';
-import RPCUnspent from '../src/app/types/rpc-unspent';
-import SimpleStorage from '../src/server/modules/storage';
-import {storageKeys} from '../src/server/constants';
-import Token from '../src/app/types/token';
-import {unixTime} from '../src/app/util';
-import Wallet from '../src/server/modules/wallet';
-import XBridgeInfo from '../src/app/types/xbridgeinfo';
+import Recipient from '../../src/app/types/recipient';
+import RPCController from '../../src/server/modules/rpc-controller';
+import RPCTransaction from '../../src/app/types/rpc-transaction';
+import RPCUnspent from '../../src/app/types/rpc-unspent';
+import SimpleStorage from '../../src/server/modules/storage';
+import {storageKeys} from '../../src/server/constants';
+import Token from '../../src/app/types/token';
+import {unixTime} from '../../src/app/util';
+import Wallet from '../../src/server/modules/wallet';
+import XBridgeInfo from '../../src/app/types/xbridgeinfo';
 
 describe('Wallet Test Suite', function() {
   const appStorage = new SimpleStorage();

@@ -7,15 +7,15 @@ import moment from 'moment';
 import os from 'os';
 import path from 'path';
 
-import CCWalletConf from '../src/app/types/ccwalletconf';
-import CloudChains from '../src/server/modules/cloudchains';
-import {Crypt, pbkdf2} from '../src/app/modules/crypt';
-import {DEFAULT_MASTER_PORT, platforms, ccBinDirs, ccBinNames} from '../src/app/constants';
+import CCWalletConf from '../../src/app/types/ccwalletconf';
+import CloudChains from '../../src/server/modules/cloudchains';
+import {Crypt, pbkdf2} from '../../src/app/modules/crypt';
+import {DEFAULT_MASTER_PORT, platforms, ccBinDirs, ccBinNames} from '../../src/app/constants';
 import fakeExecFile, {FakeSpawn} from './fake-exec-file';
 import FakeRPCController from './fake-rpc-controller';
-import {parseAPIError} from '../src/app/util';
-import SimpleStorage from '../src/server/modules/storage';
-import {storageKeys} from '../src/server/constants';
+import {parseAPIError} from '../../src/app/util';
+import SimpleStorage from '../../src/server/modules/storage';
+import {storageKeys} from '../../src/server/constants';
 
 describe('Util Test Suite', function() {
   it('parseAPIError()', function() {

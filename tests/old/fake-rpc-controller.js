@@ -1,12 +1,12 @@
-import RPCBlock from '../src/app/types/rpc-block';
-import RPCBlockchainInfo from '../src/app/types/rpc-blockchain-info';
-import RPCInfo from '../src/app/types/rpc-info';
-import RPCNetworkInfo from '../src/app/types/rpc-network-info';
-import RPCUnspent from '../src/app/types/rpc-unspent';
-import RPCSignedRawTransaction from '../src/app/types/rpc-signed-raw-transaction';
-import RPCTransaction from '../src/app/types/rpc-transaction';
-import RPCTransactionOutput from '../src/app/types/rpc-transaction-output';
-import {unixTime} from '../src/app/util';
+import RPCBlock from '../../src/app/types/rpc-block';
+import RPCBlockchainInfo from '../../src/app/types/rpc-blockchain-info';
+import RPCInfo from '../../src/app/types/rpc-info';
+import RPCNetworkInfo from '../../src/app/types/rpc-network-info';
+import RPCUnspent from '../../src/app/types/rpc-unspent';
+import RPCSignedRawTransaction from '../../src/app/types/rpc-signed-raw-transaction';
+import RPCTransaction from '../../src/app/types/rpc-transaction';
+import RPCTransactionOutput from '../../src/app/types/rpc-transaction-output';
+import {unixTime} from '../../src/app/util';
 
 /**
  * Used in unit tests

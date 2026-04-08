@@ -3,11 +3,11 @@
 import should from 'should';
 
 import './rtests';
-import {DUST_SATOSHIS} from '../src/app/constants'
-import Recipient from '../src/app/types/recipient';
-import RPCUnspent from '../src/app/types/rpc-unspent';
-import TransactionBuilder from '../src/app/modules/transactionbuilder';
-import XBridgeInfo from '../src/app/types/xbridgeinfo';
+import {DUST_SATOSHIS} from '../../src/app/constants'
+import Recipient from '../../src/app/types/recipient';
+import RPCUnspent from '../../src/app/types/rpc-unspent';
+import TransactionBuilder from '../../src/app/modules/transactionbuilder';
+import XBridgeInfo from '../../src/app/types/xbridgeinfo';
 
 describe('Transaction Builder Test Suite', function() {
   const defaultFeeInfo = new XBridgeInfo({ ticker: 'BLOCK', feeperbyte: 20, mintxfee: 10000, coin: 100000000 });

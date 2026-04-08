@@ -1,8 +1,8 @@
 /*eslint quotes: 0, key-spacing: 0*/
 import FakeRPCController from './fake-rpc-controller';
-import PriceData from '../src/app/types/pricedata';
-import RPCTransaction from '../src/app/types/rpc-transaction';
-import {unixTime} from '../src/app/util';
+import PriceData from '../../src/app/types/pricedata';
+import RPCTransaction from '../../src/app/types/rpc-transaction';
+import {unixTime} from '../../src/app/util';
 
 export const resolvePromise = arg => new Promise((resolve, reject) => resolve(arg));
 

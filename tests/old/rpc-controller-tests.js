@@ -1,15 +1,15 @@
 /* global describe, it */
 /* TODO RPCController tests should not rely on cli availability
 import 'should';
-import RPCController from '../src/server/modules/rpc-controller';
-import RPCInfo from '../src/app/types/rpc-info';
-import RPCNetworkInfo from '../src/app/types/rpc-network-info';
-import RPCBlockchainInfo from '../src/app/types/rpc-blockchain-info';
-import RPCBlock from '../src/app/types/rpc-block';
-import RPCUnspent from '../src/app/types/rpc-unspent';
-import RPCTransactionOutput from '../src/app/types/rpc-transaction-output';
-import RPCTransaction from '../src/app/types/rpc-transaction';
-import RPCSignedRawTransaction from '../src/app/types/rpc-signed-raw-transaction';
+import RPCController from '../../src/server/modules/rpc-controller';
+import RPCInfo from '../../src/app/types/rpc-info';
+import RPCNetworkInfo from '../../src/app/types/rpc-network-info';
+import RPCBlockchainInfo from '../../src/app/types/rpc-blockchain-info';
+import RPCBlock from '../../src/app/types/rpc-block';
+import RPCUnspent from '../../src/app/types/rpc-unspent';
+import RPCTransactionOutput from '../../src/app/types/rpc-transaction-output';
+import RPCTransaction from '../../src/app/types/rpc-transaction';
+import RPCSignedRawTransaction from '../../src/app/types/rpc-signed-raw-transaction';
 
 const { username, password, port } = process.env;
 

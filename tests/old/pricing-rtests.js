@@ -3,10 +3,10 @@
 import should from 'should';
 
 import './rtests';
-import domStorage from '../src/app/modules/dom-storage';
+import domStorage from '../../src/app/modules/dom-storage';
 import FakeApi from './fake-api';
-import PriceData from '../src/app/types/pricedata';
-import Pricing from '../src/app/modules/pricing-r';
+import PriceData from '../../src/app/types/pricedata';
+import Pricing from '../../src/app/modules/pricing-r';
 
 describe('Pricing Renderer Test Suite', function() {
   const fakeApi = window.api;

@@ -1,8 +1,8 @@
 /*global describe,it*/
 /*eslint quotes: 0, key-spacing: 0*/
 import should from 'should';
-import PriceData from '../src/app/types/pricedata';
-import Pricing from '../src/server/modules/pricing';
+import PriceData from '../../src/app/types/pricedata';
+import Pricing from '../../src/server/modules/pricing';
 
 describe('Pricing Test Suite', function() {
   const defaultReq = async (ticker, currency) => {

@@ -1,15 +1,15 @@
 /* global describe,it,beforeEach */
 import 'should';
 import path from 'path';
-import ConfController from '../src/server/modules/conf-controller';
-import SimpleStorage from '../src/server/modules/storage';
-import {storageKeys} from '../src/server/constants';
-import Token from '../src/app/types/token';
-import XBridgeInfo from '../src/app/types/xbridgeinfo';
+import ConfController from '../../src/server/modules/conf-controller';
+import SimpleStorage from '../../src/server/modules/storage';
+import {storageKeys} from '../../src/server/constants';
+import Token from '../../src/app/types/token';
+import XBridgeInfo from '../../src/app/types/xbridgeinfo';
 
 describe('ConfController Test Suite', function() {
   const availableWallets = ['BLOCK', 'BTC'];
-  const defaultXBridgeConfDir = path.resolve(__dirname, '../blockchain-configuration-files');
+  const defaultXBridgeConfDir = path.resolve(__dirname, '../../blockchain-configuration-files');
   let confController;
   const storage = new SimpleStorage(); // in memory only
   beforeEach(async function() {
@@ -26,7 +26,7 @@ describe('ConfController Test Suite', function() {
     storage.clear();
     const confContr = new ConfController(storage, availableWallets);
     confContr.getManifest().should.be.eql([]); // check that [] is default prior to load
-    const confDir = path.resolve(__dirname, '../blockchain-configuration-files');
+    const confDir = path.resolve(__dirname, '../../blockchain-configuration-files');
     await confContr.init(confDir);
     confContr.getManifest().length.should.be.greaterThan(0);
   });

@@ -6,15 +6,15 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 
-import CloudChains from '../src/server/modules/cloudchains';
-import ConfController from '../src/server/modules/conf-controller';
+import CloudChains from '../../src/server/modules/cloudchains';
+import ConfController from '../../src/server/modules/conf-controller';
 import FakeRPCController from './fake-rpc-controller';
-import RPCTransaction from '../src/app/types/rpc-transaction';
-import SimpleStorage from '../src/server/modules/storage';
-import {storageKeys} from '../src/server/constants';
-import TokenManifest from '../src/app/modules/token-manifest';
-import Wallet from '../src/server/modules/wallet';
-import WalletController from '../src/server/modules/wallet-controller';
+import RPCTransaction from '../../src/app/types/rpc-transaction';
+import SimpleStorage from '../../src/server/modules/storage';
+import {storageKeys} from '../../src/server/constants';
+import TokenManifest from '../../src/app/modules/token-manifest';
+import Wallet from '../../src/server/modules/wallet';
+import WalletController from '../../src/server/modules/wallet-controller';
 
 const math = create(all, {
   number: 'BigNumber',

@@ -1,6 +1,6 @@
 /*global describe,it,beforeEach*/
 
-import ContextMenu from '../src/server/modules/context-menu';
+import ContextMenu from '../../src/server/modules/context-menu';
 import FakeElectronMenu from './fake-electron-menu';
 
 describe('ContextMenu Test Suite', function() {
