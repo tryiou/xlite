@@ -19,6 +19,7 @@ import _ from 'lodash';
 import electron from 'electron';
 import fs from 'fs-extra';
 import path from 'path';
+import crypto from 'crypto';
 import childProcess from 'child_process';
 import { v4 as uuidV4 } from 'uuid';
 import moment from 'moment';
@@ -102,6 +103,13 @@ class CloudChains {
    * @private
    */
   _selectionPatt = /selection/i;
+  /**
+   * True when the running daemon was adopted (already running at startSPV)
+   * rather than spawned by this session — shutdown must still stop it.
+   * @type {boolean}
+   * @private
+   */
+  _adopted = false;
   /**
    * @type {RegExp}
    * @private
@@ -446,6 +454,40 @@ class CloudChains {
   }
 
   /**
+   * Verifies the bundled daemon binary against its bin.json SHA256 pin.
+   * The pin protects the DISTRIBUTION chain: packaged/released apps refuse
+   * to run a binary that doesn't match bin.json. In development the local
+   * bin/ directory IS the developer's build output — a mismatch there logs
+   * a warning and proceeds, so swapping in a freshly built daemon needs no
+   * manual bookkeeping.
+   * @returns {Promise<void>} rejects on pin mismatch (packaged builds only)
+   */
+  async _verifyPinnedBinary() {
+    const binKey = ccBinDirs[this._platform];
+    let binJson;
+    try {
+      binJson = await fs.readJson(path.resolve(__dirname, '../../../bin.json'));
+    } catch (e) {
+      logger.warn(`_verifyPinnedBinary: bin.json unavailable (${e.message}); skipping verification`);
+      return;
+    }
+    const entry = binJson && binJson[binKey];
+    if (!entry || !entry.hash) {
+      logger.warn(`_verifyPinnedBinary: no pinned hash for platform '${binKey}'; skipping verification`);
+      return;
+    }
+    const filePath = this.getCCSPVFilePath();
+    const hash = crypto.createHash('sha256').update(await fs.readFile(filePath)).digest('hex');
+    if (hash !== entry.hash.toLowerCase()) {
+      if (!isDev) {
+        throw new Error(`daemon binary failed integrity check: sha256(${filePath})=${hash} != pinned ${entry.hash}`);
+      }
+      logger.warn(`_verifyPinnedBinary: running UNPINNED daemon binary in dev mode: `
+        + `sha256(${filePath})=${hash} (pin: ${entry.hash})`);
+    }
+  }
+
+  /**
    * Gets the version of the CC CLI and returns an empty string on failure
    * @returns {Promise<string>}
    */
@@ -548,16 +590,28 @@ class CloudChains {
    */
   startSPV(password = '') {
     return new Promise(resolve => {
-      this.isWalletRPCRunning().then(running => {
+      this.isWalletRPCRunning().then(async running => {
         if (running) {
           logger.info('CloudChains wallet running');
+          // We did not spawn this daemon — track it so shutdown still stops it.
+          this._adopted = true;
           resolve(true);
           return;
         }
 
+        this._adopted = false;
+
         if (this.spvIsRunning()) {
           this._cli.kill('SIGINT');
           this._cli = null;
+        }
+
+        try {
+          await this._verifyPinnedBinary();
+        } catch (e) {
+          logger.error(`startSPV: ${e.message}`);
+          settle(false);
+          return;
         }
 
         logger.info('Starting CloudChains daemon');
@@ -594,23 +648,34 @@ class CloudChains {
         if (effectivePassword) this._envPassword = null;
 
         let sawBadPassword = false;
-        let sawSelection = false;
+
+        // Match patterns per LINE: daemon prompts are line-oriented, and
+        // chunk boundaries on the pipe can coalesce earlier output (e.g.
+        // startup warnings) into the same buffer, which broke ^-anchored
+        // regexes tested against raw chunks and stalled stdin flows.
+        const handleStdoutLine = (line) => {
+          if (settled) return;
+          if (this._badPasswordPatt.test(line)) {
+            sawBadPassword = true;
+          } else if (DAEMON_STDOUT.SELECTION_MENU.test(line)) {
+            // Interactive menu means no wallet/no env password — fail fast
+            // instead of idling until the safety timeout kills us.
+            logger.warn('startSPV: selection menu detected; aborting');
+            try { cli.kill('SIGINT'); } catch (e) { /* noop */ }
+            settle(false);
+          } else if (DAEMON_STDOUT.RPC_SERVER_READY.test(line)) {
+            const expiry = unixTime() + this._rpcStartExpirySeconds;
+            this._waitForRpc(expiry, this._rpcWaitDelay)
+              .then((available) => settle(available))
+              .catch(() => settle(false));
+          }
+        };
 
         cli.stdout.on('data', (data) => {
           try {
             if (settled) return;
             const str = data.toString('utf8');
-
-            if (this._badPasswordPatt.test(str)) {
-              sawBadPassword = true;
-            } else if (this._selectionPatt.test(str)) {
-              sawSelection = true;
-            } else if (DAEMON_STDOUT.RPC_SERVER_READY.test(str)) {
-              const expiry = unixTime() + this._rpcStartExpirySeconds;
-              this._waitForRpc(expiry, this._rpcWaitDelay)
-                .then((available) => settle(available))
-                .catch(() => settle(false));
-            }
+            str.split(/\r?\n/).forEach(handleStdoutLine);
           } catch(e) { logger.error(`startSPV stdout handler error: ${e.message}`); }
         });
 
@@ -638,7 +703,7 @@ class CloudChains {
           this._cli = null;
           const code = cli.exitCode;
           logger.info(`startSPV daemon exited with code ${code}`);
-          if (sawBadPassword || (!effectivePassword && sawSelection)) {
+          if (sawBadPassword) {
             settle(false);
           } else if (code === DAEMON_EXIT.SUCCESS) {
             this.isWalletRPCRunning()
@@ -667,6 +732,18 @@ class CloudChains {
    * @returns {Promise<boolean>}
    */
   async stopSPV() {
+    // Adopted daemon: we never spawned it, so there is no child handle —
+    // but an unlocked wallet must not be left running after quit.
+    if ((!this._cli || _.isNumber(this._cli.exitCode)) && this._adopted) {
+      this._cli = null;
+      // Adopted daemon that already died on its own: nothing to stop, and
+      // reporting failure here would spam a spurious shutdown error.
+      const stopped = await this.isWalletRPCRunning()
+        ? await this._rpc.ccStop()
+        : true;
+      this._adopted = false;
+      return stopped;
+    }
     // If no CLI reference or the process has already exited, nothing to stop
     if (!this._cli || _.isNumber(this._cli.exitCode)) {
       this._cli = null;

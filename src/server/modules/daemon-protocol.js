@@ -13,10 +13,14 @@ export const DAEMON_EXIT = {
 };
 
 export const DAEMON_STDOUT = {
-  PASSWORD_PROMPT: /^password:/i,
-  MNEMONIC_PROMPT: /^mnemonic:/i,
-  RPC_SERVER_READY: /master\sRPC\sserver/i,
-  SELECTION_MENU: /selection/i,
+  PASSWORD_PROMPT: /^password:/im,
+  MNEMONIC_PROMPT: /^mnemonic:/im,
+  // Anchored on the post-bind "listening" line emitted by the daemon AFTER
+  // the socket is accepting. The older /master RPC server/i pattern also
+  // matched the daemon's error line ("Error during master RPC server
+  // operation…"), misreading bind failures as readiness.
+  RPC_SERVER_READY: /master\sRPC\sserver\slistening/i,
+  SELECTION_MENU: /^selection/i,
   WALLET_EXISTS: /wallet already exists/i,
   PASSWORD_CHANGED: /password changed successfully/i,
 };

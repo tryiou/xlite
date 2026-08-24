@@ -229,11 +229,10 @@ app.on('ready', async () => {
       if (shutdownRequested)
         return;
       shutdownRequested = true;
-      // Shutdown the cli on window close if it's running.
-      if (!cloudChains.spvIsRunning()) {
-        logger.info('wallet shutdown');
-        return;
-      }
+      // Stop the daemon on quit if one is running. NOTE: no spvIsRunning()
+      // gate here — an ADOPTED daemon (running before this session spawned
+      // anything) has no child handle, and only stopSPV() knows how to stop
+      // it via RPC. It cheaply no-ops when nothing is running.
       try {
         if (!(await cloudChains.stopSPV())) {
           logger.error('failed to stop the wallet daemon');
@@ -287,9 +286,25 @@ app.on('ready', async () => {
       event.preventDefault();
     });
   });
-  app.on('will-quit', async (event) => {
-    if (!shutdownMgr.shutdownRequested())
-      await shutdownMgr.shutdown();
+  // Electron does not await async will-quit handlers — block the quit,
+  // run shutdown to completion (bounded: a wedged daemon RPC must not
+  // hang the app forever — the stale-daemon sweep covers leftovers),
+  // then quit again explicitly.
+  let quitting = false;
+  app.on('will-quit', (event) => {
+    if (quitting)
+      return;
+    event.preventDefault();
+    const SHUTDOWN_CAP_MS = 8000;
+    Promise.race([
+      Promise.resolve(shutdownMgr.shutdown()),
+      new Promise((resolve) => setTimeout(resolve, SHUTDOWN_CAP_MS)),
+    ])
+      .catch(e => logger.error('shutdown during quit failed', e))
+      .then(() => {
+        quitting = true;
+        app.quit();
+      });
   });
 
   if (isDev) {

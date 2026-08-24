@@ -135,6 +135,16 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       setErrorMessage(Localize.text('Invalid password.', 'login'));
       setProcessing(false);
       return;
+    } else {
+      // Adopted/already-running wallet: the submitted password must still
+      // be verified — without this, ANY password "logged in" to an
+      // already-unlocked daemon.
+      const passwordOk = await cloudChains.matchesStoredPassword(password);
+      if (!passwordOk) {
+        setErrorMessage(Localize.text('Invalid password.', 'login'));
+        setProcessing(false);
+        return;
+      }
     }
 
     const walletCreated = await cloudChains.isWalletCreated();
