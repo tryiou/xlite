@@ -15,6 +15,7 @@ import {
   DAEMON_STDERR_PATTERNS,
   DAEMON_STOP_SIGNAL,
 } from './daemon-protocol';
+import { awaitDaemonExit } from './daemon-exit';
 
 import _ from 'lodash';
 import electron from 'electron';
@@ -26,31 +27,6 @@ import { v4 as uuidV4 } from 'uuid';
 import moment from 'moment';
 
 const isDev = process.env.ELECTRON_IS_DEV === 'true';
-
-const DAEMON_EXIT_GRACE_MS = 10000;
-
-/**
- * Resolves once the child process has fully exited. After the grace
- * period it force-kills so a wedged shutdown cannot stall callers.
- * TERM-triggered hooks (wallet flush, port release) complete before
- * any respawn or file operation that depends on them.
- */
-function awaitDaemonExit(child, graceMs = DAEMON_EXIT_GRACE_MS) {
-  return new Promise((resolve) => {
-    if (!child || child.exitCode !== null || child.signalCode !== null) {
-      resolve();
-      return;
-    }
-    const timer = setTimeout(() => {
-      try { child.kill('SIGKILL'); } catch (e) { /* already gone */ }
-      resolve();
-    }, graceMs);
-    child.once('exit', () => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
-}
 
 /**
  * Manage CloudChains litewallet configuration.
@@ -801,154 +777,162 @@ class CloudChains {
    */
   createSPVWallet(password, mnemonic = '') {
     // Async executor: the pre-spawn section must await the previous
-    // daemon's full exit. Every failure path routes through settle(),
-    // so an executor rejection can only originate from settle/reject.
+    // daemon's full exit. The wrapper try/catch routes any accidental
+    // throw to reject; explicit failure paths call settle()/reject.
     return new Promise(async (resolve, reject) => {
-      // --- Pre-flight checks ---
-      if (!password) {
-        reject(new Error('failed to create wallet with empty password'));
-        return;
-      }
-
-      // Kill existing process if running
-      const prior = this.spvIsRunning() ? this._cli : null;
-      if (prior) {
-        prior.kill(DAEMON_STOP_SIGNAL);
-        this._cli = null;
-      }
-
-      // Wait (bounded) for full exit before touching its key file or
-      // respawning: the daemon's shutdown hook flushes wallet state and
-      // releases the master port; moving files or rebinding mid-flush
-      // races that teardown.
-      await awaitDaemonExit(prior);
-
-      if (this.isInstalled()) {
-        const keyPath = this.getKeyPath();
-        const keyExt = path.extname(keyPath);
-        const keyName = path.basename(keyPath, keyExt);
-        const backupFilePath = path.join(
-          this.getBackupDir(),
-          `${keyName}_${moment().format('YYYYMMDDHHmmss')}${keyExt}`
-        );
-        try {
-          fs.moveSync(keyPath, backupFilePath, { overwrite: true });
-        } catch (err) {
-          logger.error(`Move key file failed with error: ${err.message}`);
-        }
-      }
-
-      logger.info('Creating SPV wallet via daemon');
-
-      // --- Build args ---
-      const args = mnemonic
-        ? ['--xliterpc', '--createwalletmnemonic']
-        : ['--xliterpc', '--createdefaultwallet'];
-
-      // --- State tracking ---
-      let settled = false;
-      const stderrChunks = [];
-
-      const settle = (result, isReject = false) => {
-        if (settled) return;
-        settled = true;
-        if (isReject) reject(result);
-        else resolve(result);
-      };
-
-      // --- Spawn daemon ---
-      let cli;
       try {
-        cli = this._spawn(
-          this.getCCSPVFilePath(),
-          args,
-          {
-            detached: false,
-            windowsHide: true,
-            env: this._getDaemonEnv(password, mnemonic),
-          }
-        );
+        await this._createSPVWalletInner(resolve, reject, password, mnemonic);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  async _createSPVWalletInner(resolve, reject, password, mnemonic = '') {
+    // --- Pre-flight checks ---
+    if (!password) {
+      reject(new Error('failed to create wallet with empty password'));
+      return;
+    }
+
+    // Kill existing process if running
+    const prior = this.spvIsRunning() ? this._cli : null;
+    if (prior) {
+      prior.kill(DAEMON_STOP_SIGNAL);
+      this._cli = null;
+    }
+
+    // Wait (bounded) for full exit before touching its key file or
+    // respawning: the daemon's shutdown hook flushes wallet state and
+    // releases the master port; moving files or rebinding mid-flush
+    // races that teardown.
+    await awaitDaemonExit(prior);
+
+    if (this.isInstalled()) {
+      const keyPath = this.getKeyPath();
+      const keyExt = path.extname(keyPath);
+      const keyName = path.basename(keyPath, keyExt);
+      const backupFilePath = path.join(
+        this.getBackupDir(),
+        `${keyName}_${moment().format('YYYYMMDDHHmmss')}${keyExt}`
+      );
+      try {
+        fs.moveSync(keyPath, backupFilePath, { overwrite: true });
       } catch (err) {
-        logger.error(`createSPVWallet spawn error: ${err.message}`);
-        settle(new Error(`failed to spawn daemon: ${err.message}`), true);
+        logger.error(`Move key file failed with error: ${err.message}`);
+      }
+    }
+
+    logger.info('Creating SPV wallet via daemon');
+
+    // --- Build args ---
+    const args = mnemonic
+      ? ['--xliterpc', '--createwalletmnemonic']
+      : ['--xliterpc', '--createdefaultwallet'];
+
+    // --- State tracking ---
+    let settled = false;
+    const stderrChunks = [];
+
+    const settle = (result, isReject = false) => {
+      if (settled) return;
+      settled = true;
+      if (isReject) reject(result);
+      else resolve(result);
+    };
+
+    // --- Spawn daemon ---
+    let cli;
+    try {
+      cli = this._spawn(
+        this.getCCSPVFilePath(),
+        args,
+        {
+          detached: false,
+          windowsHide: true,
+          env: this._getDaemonEnv(password, mnemonic),
+        }
+      );
+    } catch (err) {
+      logger.error(`createSPVWallet spawn error: ${err.message}`);
+      settle(new Error(`failed to spawn daemon: ${err.message}`), true);
+      return;
+    }
+
+    // --- Stdout handler (pattern detection only) ---
+    let sawBadPassword = false;
+    let sawBadMnemonic = false;
+    cli.stdout.on('data', (data) => {
+      if (settled) return;
+      const str = data.toString('utf8');
+
+      if (DAEMON_STDOUT_ERRORS.BADPASSWORD.test(str)) {
+        sawBadPassword = true;
+      } else if (DAEMON_STDOUT_ERRORS.BADMNEMONIC.test(str)) {
+        sawBadMnemonic = true;
+      }
+    });
+
+    // --- Stderr handler (collect content, decide at close) ---
+    cli.stderr.on('data', (data) => {
+      const str = data.toString('utf8');
+      stderrChunks.push(str);
+      logger.error(`createSPVWallet stderr: ${str}`);
+    });
+
+    // --- Close handler (primary resolution via exit code) ---
+    cli.stdout.on('close', () => {
+      if (settled) return;
+      clearTimeout(timeout);
+      this._cli = null;
+      const code = cli.exitCode;
+
+      logger.info(`createSPVWallet daemon exited with code ${code}`);
+
+      // Check stdout-detected errors first
+      if (sawBadPassword) {
+        settle(new Error('password does not meet strength requirements'), true);
+        return;
+      }
+      if (sawBadMnemonic) {
+        settle(new Error('invalid or corrupted mnemonic phrase'), true);
         return;
       }
 
-      // --- Stdout handler (pattern detection only) ---
-      let sawBadPassword = false;
-      let sawBadMnemonic = false;
-      cli.stdout.on('data', (data) => {
-        if (settled) return;
-        const str = data.toString('utf8');
+      // Exit code 0: daemon succeeded, fetch the mnemonic
+      if (code === DAEMON_EXIT.SUCCESS) {
+        this.getCCMnemonic(password)
+          .then((m) => settle(m))
+          .catch((err) => settle(err, true));
+        return;
+      }
 
-        if (DAEMON_STDOUT_ERRORS.BADPASSWORD.test(str)) {
-          sawBadPassword = true;
-        } else if (DAEMON_STDOUT_ERRORS.BADMNEMONIC.test(str)) {
-          sawBadMnemonic = true;
-        }
-      });
-
-      // --- Stderr handler (collect content, decide at close) ---
-      cli.stderr.on('data', (data) => {
-        const str = data.toString('utf8');
-        stderrChunks.push(str);
-        logger.error(`createSPVWallet stderr: ${str}`);
-      });
-
-      // --- Close handler (primary resolution via exit code) ---
-      cli.stdout.on('close', () => {
-        if (settled) return;
-        clearTimeout(timeout);
-        this._cli = null;
-        const code = cli.exitCode;
-
-        logger.info(`createSPVWallet daemon exited with code ${code}`);
-
-        // Check stdout-detected errors first
-        if (sawBadPassword) {
-          settle(new Error('password does not meet strength requirements'), true);
-          return;
-        }
-        if (sawBadMnemonic) {
-          settle(new Error('invalid or corrupted mnemonic phrase'), true);
-          return;
-        }
-
-        // Exit code 0: daemon succeeded, fetch the mnemonic
-        if (code === DAEMON_EXIT.SUCCESS) {
-          this.getCCMnemonic(password)
-            .then((m) => settle(m))
-            .catch((err) => settle(err, true));
-          return;
-        }
-
-        // Non-zero exit: parse stderr for diagnosis
-        const fullStderr = stderrChunks.join('\n').trim();
-        const fatalMatch = DAEMON_STDERR_PATTERNS.FATAL.find((p) =>
-          p.test(fullStderr)
+      // Non-zero exit: parse stderr for diagnosis
+      const fullStderr = stderrChunks.join('\n').trim();
+      const fatalMatch = DAEMON_STDERR_PATTERNS.FATAL.find((p) =>
+        p.test(fullStderr)
+      );
+      if (fatalMatch) {
+        settle(new Error(`daemon fatal error: ${fullStderr || 'unknown'}`), true);
+      } else {
+        settle(
+          new Error(
+            `failed to create wallet (exit ${code}): ${fullStderr || 'unknown error'}`
+          ),
+          true
         );
-        if (fatalMatch) {
-          settle(new Error(`daemon fatal error: ${fullStderr || 'unknown'}`), true);
-        } else {
-          settle(
-            new Error(
-              `failed to create wallet (exit ${code}): ${fullStderr || 'unknown error'}`
-            ),
-            true
-          );
-        }
-      });
-
-      // --- Timeout safety net ---
-      const timeoutMs = this._rpcStartExpirySeconds * 1000 * 3; // 90 seconds
-      const timeout = setTimeout(() => {
-        cli.kill(DAEMON_STOP_SIGNAL);
-        settle(new Error('wallet creation timed out'), true);
-      }, timeoutMs);
-
-      // Watch this process
-      this._cli = cli;
+      }
     });
+
+    // --- Timeout safety net ---
+    const timeoutMs = this._rpcStartExpirySeconds * 1000 * 3; // 90 seconds
+    const timeout = setTimeout(() => {
+      cli.kill(DAEMON_STOP_SIGNAL);
+      settle(new Error('wallet creation timed out'), true);
+    }, timeoutMs);
+
+    // Watch this process
+    this._cli = cli;
   }
 
   /**
