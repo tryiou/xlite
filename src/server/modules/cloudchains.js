@@ -13,6 +13,7 @@ import {
   DAEMON_STDOUT,
   DAEMON_STDOUT_ERRORS,
   DAEMON_STDERR_PATTERNS,
+  DAEMON_STOP_SIGNAL,
 } from './daemon-protocol';
 
 import _ from 'lodash';
@@ -24,7 +25,33 @@ import childProcess from 'child_process';
 import { v4 as uuidV4 } from 'uuid';
 import moment from 'moment';
 
-const isDev = process.env.ELECTRON_IS_DEV === 'true'; 
+const isDev = process.env.ELECTRON_IS_DEV === 'true';
+
+const DAEMON_EXIT_GRACE_MS = 10000;
+
+/**
+ * Resolves once the child process has fully exited. After the grace
+ * period it force-kills so a wedged shutdown cannot stall callers.
+ * TERM-triggered hooks (wallet flush, port release) complete before
+ * any respawn or file operation that depends on them.
+ */
+function awaitDaemonExit(child, graceMs = DAEMON_EXIT_GRACE_MS) {
+  return new Promise((resolve) => {
+    if (!child || child.exitCode !== null || child.signalCode !== null) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => {
+      try { child.kill('SIGKILL'); } catch (e) { /* already gone */ }
+      resolve();
+    }, graceMs);
+    child.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+  });
+}
+
 /**
  * Manage CloudChains litewallet configuration.
  */
@@ -602,9 +629,21 @@ class CloudChains {
         this._adopted = false;
 
         if (this.spvIsRunning()) {
-          this._cli.kill('SIGINT');
+          const prior = this._cli;
+          prior.kill(DAEMON_STOP_SIGNAL);
           this._cli = null;
+          // Bounded wait for full exit: graceful shutdown flushes wallet
+          // state and releases the master port; respawning before that
+          // loses the 9955 bind race.
+          await awaitDaemonExit(prior);
         }
+
+        let settled = false;
+        const settle = (value) => {
+          if (settled) return;
+          settled = true;
+          resolve(value);
+        };
 
         try {
           await this._verifyPinnedBinary();
@@ -615,13 +654,6 @@ class CloudChains {
         }
 
         logger.info('Starting CloudChains daemon');
-
-        let settled = false;
-        const settle = (value) => {
-          if (settled) return;
-          settled = true;
-          resolve(value);
-        };
 
         // Use env password if caller provided none and env password is available
         const effectivePassword = (!password && this._envPassword) ? this._envPassword : password;
@@ -661,7 +693,7 @@ class CloudChains {
             // Interactive menu means no wallet/no env password — fail fast
             // instead of idling until the safety timeout kills us.
             logger.warn('startSPV: selection menu detected; aborting');
-            try { cli.kill('SIGINT'); } catch (e) { /* noop */ }
+            try { cli.kill(DAEMON_STOP_SIGNAL); } catch (e) { /* noop */ }
             settle(false);
           } else if (DAEMON_STDOUT.RPC_SERVER_READY.test(line)) {
             const expiry = unixTime() + this._rpcStartExpirySeconds;
@@ -717,7 +749,7 @@ class CloudChains {
         // Timeout safety net
         const timeout = setTimeout(() => {
           if (!settled) {
-            cli.kill('SIGINT');
+            cli.kill(DAEMON_STOP_SIGNAL);
             settle(false);
           }
         }, this._rpcStartExpirySeconds * 1000 * 3);
@@ -754,7 +786,7 @@ class CloudChains {
       r = await this._rpc.ccStop();
     else {
       if (this._isCLIAvailable())
-        return this._cli.kill('SIGINT');
+        return this._cli.kill(DAEMON_STOP_SIGNAL);
     }
     return r;
   }
@@ -768,7 +800,10 @@ class CloudChains {
    * @returns {Promise<string>}
    */
   createSPVWallet(password, mnemonic = '') {
-    return new Promise((resolve, reject) => {
+    // Async executor: the pre-spawn section must await the previous
+    // daemon's full exit. Every failure path routes through settle(),
+    // so an executor rejection can only originate from settle/reject.
+    return new Promise(async (resolve, reject) => {
       // --- Pre-flight checks ---
       if (!password) {
         reject(new Error('failed to create wallet with empty password'));
@@ -776,12 +811,18 @@ class CloudChains {
       }
 
       // Kill existing process if running
-      if (this.spvIsRunning()) {
-        this._cli.kill('SIGINT');
+      const prior = this.spvIsRunning() ? this._cli : null;
+      if (prior) {
+        prior.kill(DAEMON_STOP_SIGNAL);
         this._cli = null;
       }
 
-      // Move existing key file to backup before creating new wallet
+      // Wait (bounded) for full exit before touching its key file or
+      // respawning: the daemon's shutdown hook flushes wallet state and
+      // releases the master port; moving files or rebinding mid-flush
+      // races that teardown.
+      await awaitDaemonExit(prior);
+
       if (this.isInstalled()) {
         const keyPath = this.getKeyPath();
         const keyExt = path.extname(keyPath);
@@ -901,7 +942,7 @@ class CloudChains {
       // --- Timeout safety net ---
       const timeoutMs = this._rpcStartExpirySeconds * 1000 * 3; // 90 seconds
       const timeout = setTimeout(() => {
-        cli.kill('SIGINT');
+        cli.kill(DAEMON_STOP_SIGNAL);
         settle(new Error('wallet creation timed out'), true);
       }, timeoutMs);
 
@@ -943,7 +984,7 @@ class CloudChains {
         if (this._selectionPatt.test(str)) {
           sawStdout = true;
           settle(true);
-          cli.kill('SIGINT');
+          cli.kill(DAEMON_STOP_SIGNAL);
         }
       });
 
@@ -970,7 +1011,7 @@ class CloudChains {
       // Timeout safety net
       const timeout = setTimeout(() => {
         if (!settled) {
-          cli.kill('SIGINT');
+          cli.kill(DAEMON_STOP_SIGNAL);
           settle(false);
         }
       }, this._rpcStartExpirySeconds * 1000);
@@ -1052,10 +1093,10 @@ class CloudChains {
         if (DAEMON_STDOUT.PASSWORD_CHANGED.test(str)) {
           if (sawPasswordPrompt) this.saveWalletCredentials(newpw, null);
           settle(sawPasswordPrompt);
-          cli.kill('SIGINT');
+          cli.kill(DAEMON_STOP_SIGNAL);
         } else if (DAEMON_STDOUT_ERRORS.CHANGEPASSWORDFAILED.test(str)) {
           settle(false);
-          cli.kill('SIGINT');
+          cli.kill(DAEMON_STOP_SIGNAL);
         } else if (DAEMON_STDOUT.PASSWORD_PROMPT.test(str) && !sawPasswordPrompt) {
           // Daemon prompts for new password on stdin (current password comes from env var)
           sawPasswordPrompt = true;
@@ -1082,7 +1123,7 @@ class CloudChains {
       // Timeout
       const timeout = setTimeout(() => {
         if (!settled) {
-          cli.kill('SIGINT');
+          cli.kill(DAEMON_STOP_SIGNAL);
           settle(false);
         }
       }, this._rpcStartExpirySeconds * 1000);

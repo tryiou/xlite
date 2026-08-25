@@ -8,6 +8,7 @@ import {
   DAEMON_EXIT,
   DAEMON_STDOUT,
   DAEMON_STDOUT_ERRORS,
+  DAEMON_STOP_SIGNAL,
 } from '../../../src/server/modules/daemon-protocol.js';
 
 // Real daemon output samples (see xlite-daemon JSONRPCMasterServer.java,
@@ -102,5 +103,60 @@ describe('daemon-protocol: exit codes', () => {
     // treated as failure by callers.
     expect(DAEMON_EXIT.SUCCESS).toBe(0);
     expect(DAEMON_EXIT.FAILURE).not.toBe(DAEMON_EXIT.SUCCESS);
+  });
+});
+
+describe('daemon-protocol: stop signal', () => {
+  it('stops the daemon with SIGTERM so its shutdown hook runs', () => {
+    // The daemon's JVM inherits SIGINT as IGNORED through the spawn
+    // chain — INT can never trigger its shutdown hooks. TERM is the
+    // proven hook-running signal (daemon-side repro + wave evidence).
+    expect(DAEMON_STOP_SIGNAL).toBe('SIGTERM');
+  });
+});
+
+describe('daemon-protocol: stop signal usage contract', () => {
+  // The constant is only meaningful if every stop path uses it. Reading
+  // the module source as data pins that contract without needing to
+  // boot the full cloudchains module graph (electron et al.) in tests.
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(
+    path.join(__dirname, '../../../src/server/modules/cloudchains.js'),
+    'utf8'
+  );
+
+  it('routes every daemon kill through DAEMON_STOP_SIGNAL', () => {
+    expect(src.includes("kill(DAEMON_STOP_SIGNAL)")).toBe(true);
+  });
+
+  it('has no hardcoded SIGINT kills left', () => {
+    expect(/kill\(\s*'SIGINT'/.test(src)).toBe(false);
+  });
+});
+
+describe('daemon-protocol: stop-signal hygiene', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(
+    path.join(__dirname, '../../../src/server/modules/cloudchains.js'),
+    'utf8'
+  );
+
+  it('never kills with any SIGINT literal form', () => {
+    expect(/kill\(\s*['"`]SIGINT/.test(src)).toBe(false);
+  });
+
+  it('defines settle before its first use in startSPV', () => {
+    // Regression pin: startSPV's _verifyPinnedBinary catch called
+    // settle() before its const declaration (TDZ ReferenceError),
+    // leaving the outer promise pending forever on packaged builds.
+    const fn = src.slice(src.indexOf('startSPV('),
+                         src.indexOf("logger.info('Starting CloudChains daemon')"));
+    const declareAt = fn.indexOf('const settle =');
+    const firstUseAt = fn.indexOf('settle(false)');
+    expect(declareAt).toBeGreaterThan(-1);
+    expect(firstUseAt).toBeGreaterThan(-1);
+    expect(declareAt).toBeLessThan(firstUseAt);
   });
 });

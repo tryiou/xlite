@@ -12,6 +12,14 @@ export const DAEMON_EXIT = {
   FAILURE: 1,
 };
 
+/**
+ * Signal used to stop the daemon process. The daemon's JVM inherits
+ * SIGINT as IGNORED through the spawn chain, so INT never runs its
+ * shutdown hooks; TERM is the proven hook-running signal. On win32
+ * Node maps both to a hard TerminateProcess — unchanged there.
+ */
+export const DAEMON_STOP_SIGNAL = 'SIGTERM';
+
 export const DAEMON_STDOUT = {
   PASSWORD_PROMPT: /^password:/im,
   MNEMONIC_PROMPT: /^mnemonic:/im,
