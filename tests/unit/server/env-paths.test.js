@@ -1,6 +1,10 @@
 import path from 'path';
-import {describe, expect, it, vi} from 'vitest';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {applyDataHome, xliteDataHome} from '../../../src/server/modules/env-paths';
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('xliteDataHome', () => {
   it('returns null when XLITE_DATA_HOME is unset/empty/blank', () => {
@@ -18,16 +22,38 @@ describe('xliteDataHome', () => {
 });
 
 describe('applyDataHome', () => {
-  const fakeApp = () => ({calls: [], setPath(name, p) { this.calls.push([name, p]); }});
+  const fakeApp = (name = 'xlite') => ({
+    name,
+    calls: [],
+    setPath(p, v) { this.calls.push([p, v]); },
+    getName() { return this.name; },
+  });
 
-  it('redirects appData and userData beneath the data root', () => {
-    const app = fakeApp();
+  it('redirects appData and userData beneath the data root (userData uses app name)', () => {
+    const app = fakeApp('XLite');
     const root = applyDataHome(app, '/tmp/xlite-sandbox/data');
     expect(root).toBe('/tmp/xlite-sandbox/data');
     expect(app.calls).toEqual([
       ['appData', '/tmp/xlite-sandbox/data'],
-      ['userData', path.join('/tmp/xlite-sandbox/data', 'xlite')],
+      ['userData', path.join('/tmp/xlite-sandbox/data', 'XLite')],
     ]);
+  });
+
+  it('default root comes from process.env.XLITE_DATA_HOME', () => {
+    vi.stubEnv('XLITE_DATA_HOME', '/env/provided/root');
+    const app = fakeApp('xlite');
+    const root = applyDataHome(app);
+    expect(root).toBe(path.resolve('/env/provided/root'));
+    expect(app.calls).toEqual([
+      ['appData', path.resolve('/env/provided/root')],
+      ['userData', path.join(path.resolve('/env/provided/root'), 'xlite')],
+    ]);
+  });
+
+  it('falls back to "xlite" when getName() returns empty', () => {
+    const app = fakeApp('');
+    const root = applyDataHome(app, '/tmp/xlite-sandbox/data');
+    expect(app.calls[1]).toEqual(['userData', path.join('/tmp/xlite-sandbox/data', 'xlite')]);
   });
 
   it('is a no-op returning null when no override is set or app missing', () => {

@@ -7,7 +7,7 @@ import path from 'path';
  * XLITE_DATA_HOME support — one variable redirecting BOTH xlite apps' state.
  *
  * When set, it replaces the platform application-data root for:
- *  - this GUI:   appData → $XLITE_DATA_HOME, userData → $XLITE_DATA_HOME/xlite
+ *  - this GUI:   appData → $XLITE_DATA_HOME, userData → $XLITE_DATA_HOME/<appName>
  *  - xlite-daemon: its own state root ($XLITE_DATA_HOME/CloudChains), see
  *    App.resolveUserConfigDir() in the daemon source.
  *
@@ -27,6 +27,8 @@ export function xliteDataHome(env = process.env) {
 
 /**
  * Redirect an Electron app's appData/userData beneath the given data root.
+ * userData lands in <root>/<appName> — mirroring Electron's default
+ * `<appData>/<name>` layout, so state follows whatever app.getName() reports.
  * @param app {Electron.App}
  * @param root {string|null} resolved data root; defaults to xliteDataHome()
  * @returns {string|null} the applied root, or null when no override is set
@@ -34,8 +36,9 @@ export function xliteDataHome(env = process.env) {
 export function applyDataHome(app, root = xliteDataHome()) {
   if (!root || !app)
     return null;
+  const name = app.getName() || 'xlite';
   app.setPath('appData', root);
-  app.setPath('userData', path.join(root, 'xlite'));
+  app.setPath('userData', path.join(root, name));
   return root;
 }
 
