@@ -21,13 +21,6 @@
     "explorerTx": "https://chainz.cryptoid.info/ltc/tx.dws?{{tx}}.htm"
   },
   {
-    "ticker": "PHR",
-    "name": "Phore",
-    "website": "https://phore.io/",
-    "explorer": "https://chainz.cryptoid.info/phr/",
-    "explorerTx": "https://chainz.cryptoid.info/phr/tx.dws?{{tx}}.htm"
-  },
-  {
     "ticker": "SYS",
     "name": "Syscoin",
     "website": "http://syscoin.org/",
