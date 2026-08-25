@@ -1,6 +1,7 @@
 // Copyright (c) 2020 The Blocknet developers
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
+import './modules/env-paths'; // must precede ./constants & path consumers: redirects appData/userData via XLITE_DATA_HOME
 import {publicPath} from './util/public-path'; // must be at top
 import Api from './modules/api';
 import {apiConstants} from '../app/api';
