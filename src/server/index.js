@@ -304,7 +304,10 @@ app.on('ready', async () => {
       .catch(e => logger.error('shutdown during quit failed', e))
       .then(() => {
         quitting = true;
-        app.quit();
+        // Re-issue quit on a fresh macrotask: a quit() scheduled from a
+        // microtask of the just-aborted quit dispatch is swallowed by
+        // Electron and the process stays alive with no window.
+        setImmediate(() => app.quit());
       });
   });
 
