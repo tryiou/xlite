@@ -24,6 +24,7 @@ class ConfController {
     try {
       return await this._api.confController_getManifest();
     } catch (_err) {
+      console.error('confController_getManifest failed', _err);
       return [];
     }
   }
@@ -36,6 +37,7 @@ class ConfController {
     try {
       return await this._api.confController_getManifestHash();
     } catch (_err) {
+      console.error('confController_getManifestHash failed', _err);
       return '';
     }
   }
@@ -52,6 +54,16 @@ class ConfController {
         r.push(new XBridgeInfo(o));
       return r;
     } catch (_err) {
+      console.error('confController_getXBridgeInfo failed', _err);
+      return [];
+    }
+  }
+
+  async getCoinConfigs() {
+    try {
+      return await this._api.confController_getCoinConfigs();
+    } catch (_err) {
+      console.error('confController_getCoinConfigs failed', _err);
       return [];
     }
   }

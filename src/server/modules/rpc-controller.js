@@ -466,6 +466,17 @@ class RPCController {
       return false;
     }
   }
+
+  /**
+   * Fetch coin configs from master getCoins (11-field DTO).
+   * @return {Promise<Object[]>}
+   */
+  async getCoins() {
+    const res = await this._makeRequest('getCoins', []);
+    if (!Array.isArray(res))
+      throw new Error('getCoins returned non-array');
+    return res;
+  }
 }
 
 export default RPCController;

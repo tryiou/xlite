@@ -69,6 +69,7 @@ export const apiConstants = {
   confController_getManifest: 'confController_getManifest',
   confController_getManifestHash: 'confController_getManifestHash',
   confController_getXBridgeInfo: 'confController_getXBridgeInfo',
+  confController_getCoinConfigs: 'confController_getCoinConfigs',
 
   walletController_getWallets: 'walletController_getWallets',
   walletController_getWallet: 'walletController_getWallet',
@@ -297,6 +298,9 @@ const confController_API = {
   },
   [apiConstants.confController_getXBridgeInfo]: async () => {
     return ipcRenderer.invoke(apiConstants.confController_getXBridgeInfo);
+  },
+  [apiConstants.confController_getCoinConfigs]: async () => {
+    return ipcRenderer.invoke(apiConstants.confController_getCoinConfigs);
   },
 };
 

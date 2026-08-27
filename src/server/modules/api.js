@@ -481,6 +481,10 @@ class Api {
     this._proc.handle(apiConstants.confController_getXBridgeInfo, async (evt, arg) => {
       return sanitize(await this._confController.getXBridgeInfo(), Blacklist, Whitelist);
     });
+    this._proc.handle(apiConstants.confController_getCoinConfigs, (evt, arg) => {
+      // DTO is public coin params (no secrets) — no Blacklist stripping (port is needed)
+      return this._confController.getCoinConfigs();
+    });
   }
 
   /**

@@ -25,6 +25,10 @@ class XBridgeInfo {
    * @type {number}
    */
   rpcport = -1000;
+  /**
+   * @type {number|null}
+   */
+  dustAmount = null;
 
   /**
    * Constructor

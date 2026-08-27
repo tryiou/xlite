@@ -129,6 +129,7 @@ const startup = async () => {
       [storageKeys.MANIFEST]: null,
       [storageKeys.MANIFEST_SHA]: null,
       [storageKeys.XBRIDGE_INFO]: null,
+      [storageKeys.COIN_CONFIGS]: null,
       [storageKeys.PASSWORD]: '',
       [storageKeys.SALT]: '',
       [storageKeys.BALANCES]: null,
@@ -152,14 +153,14 @@ const startup = async () => {
       return;
     }
 
-    // Init the conf controller to build the manifest
-    confController = new ConfController(storage, cloudChains.getWalletConfs().map(c => c.ticker()));
-    if (!await confController.init(ConfController.packagedManifestDir()))
-      logger.error('configuration error on install');
+    // Init the conf controller to build the manifest from daemon getCoins
+    confController = new ConfController(storage);
+    if (!await confController.init())
+      logger.error('configuration error on install — daemon getCoins unavailable');
 
-    // Update confs with manifest data
+    // Update confs with manifest data (daemon owns rpcPort, loadConfs patches only addressCount)
     try {
-      cloudChains.loadConfs(new TokenManifest(confController.getManifest(), confController.getXBridgeInfo())); // update rpc
+      cloudChains.loadConfs(new TokenManifest(confController.getManifest(), confController.getXBridgeInfo()));
     } catch (_err) {
       logger.error('Problem updating configs');
       // Fatal error, warn user and exit program
@@ -208,10 +209,10 @@ const startup = async () => {
       logger.error(err);
     });
 
-  confController = new ConfController(storage, cloudChains.getWalletConfs().map(c => c.ticker()));
-  if (!await confController.init(ConfController.packagedManifestDir()))
-    logger.error('unknown configuration error');
-  // Create the token manifest from the raw manifest data and fee information
+  confController = new ConfController(storage);
+  if (!await confController.init())
+    logger.error('unknown configuration error — daemon getCoins unavailable');
+  // Create the token manifest from the coin configs (daemon getCoins 11-field DTO)
   const tokenManifest = new TokenManifest(confController.getManifest(), confController.getXBridgeInfo());
   // Create the wallet controller
   walletController = new WalletController(cloudChains, tokenManifest, storage, debug);

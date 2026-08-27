@@ -375,12 +375,11 @@ class CloudChains {
           if (ticker === 'master') {
             this._masterConf = this._checkUpdateMasterConf(conf, filePath, fs.writeJsonSync);
             return null;
-          } else if (manifest && manifest.getToken(ticker)) { // update with manifest rpc ports
-            const token = manifest.getToken(ticker);
-            conf.rpcPort = token.xbinfo.rpcport;
-            if (conf.addressCount < defaultAddressCount)
+          } else if (manifest && manifest.getToken(ticker)) { // daemon owns rpcPort via getCoins — no overwrite
+            if (conf.addressCount < defaultAddressCount) {
               conf.addressCount = defaultAddressCount;
-            this._updateConfRpc(conf, filePath, fs.writeJsonSync);
+              this._updateConfRpc(conf, filePath, fs.writeJsonSync);
+            }
             return conf;
           } else {
             if (conf.addressCount < defaultAddressCount) {

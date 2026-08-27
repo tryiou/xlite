@@ -1,372 +1,142 @@
 // Copyright (c) 2020 The Blocknet developers
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
-import {HTTP_REQUEST_TIMEOUT} from '../../app/constants';
 import {logger} from './logger';
 import {storageKeys} from '../constants';
 import Token from '../../app/types/token';
 import XBridgeInfo from '../../app/types/xbridgeinfo';
+import RPCController from './rpc-controller';
+import ConfigHelper from '../../app/util/config-helper';
 
 import _ from 'lodash';
-import fs from 'fs-extra';
-import path from 'path';
-import request from 'superagent';
 
-const isDev = process.env.ELECTRON_IS_DEV === 'true'; 
 /**
- * Class for getting manifest and wallet data
+ * Coin config provider — daemon is source of truth via master getCoins.
+ * No filesystem blockchain-configuration-files usage. Vendored snapshot removed.
  */
 class ConfController {
 
-  /**
-   * @type {SimpleStorage}
-   * @private
-   */
   _storage = null;
-  /**
-   * @type {Set}
-   * @private
-   */
-  _availableWallets = new Set();
 
-  _reFpb = /^\s*feeperbyte\s*=\s*(\d+)\s*$/i;
-  _reMtf = /^\s*mintxfee\s*=\s*(\d+)\s*$/i;
-  _reCoin = /^\s*coin\s*=\s*(\d+)\s*$/i;
-  _rePort = /^\s*port\s*=\s*(\d+)\s*$/i;
-
-  /**
-   * Constructor
-   * @param storage {SimpleStorage}
-   * @param wallets {string[]} Available wallets (tickers)
-   */
-  constructor(storage, wallets) {
+  constructor(storage) {
     this._storage = storage;
-    this._availableWallets = new Set(wallets);
   }
 
   /**
-   * Blockchain configuration files directory.
-   * @return {string}
+   * Fetch coin configs from daemon master getCoins (11-field DTO) and cache.
+   * Migrates legacy MANIFEST/XBRIDGE_INFO → COIN_CONFIGS once.
+   * @return {Promise<boolean>} true if configs available (fresh or cached), false if daemon missing getCoins and no cache.
    */
-  static packagedManifestDir() {
-    if (isDev)
-      return path.resolve(__dirname, '../../../dist/blockchain-configuration-files');
-    else
-      return path.resolve(__dirname, '../../../dist/blockchain-configuration-files')
-        .replace('app.asar', 'app.asar.unpacked');
-  }
-
-  /**
-   * Initialize the manifest data providers.
-   * @param manifestFilesDir {string} Path to the blockchain-configuration-files
-   * @return {Promise<boolean>}
-   */
-  async init(manifestFilesDir) {
-    /* force xlite to use pre packaged manifest folder
-    if (this.getManifest().length !== 0 && this.getXBridgeInfo().length !== 0)
-      return true; // no init required
-    */
-
-    try {
-      if (!await fs.pathExists(manifestFilesDir)) {
-        logger.error(`configuration error: path not found: ${manifestFilesDir}`);
-        return false;
-      }
-    } catch (e) {
-      logger.error('failed to init blockchain config files', e);
-      return false; // fatal
-    }
-
-    // Read prepackaged manifest
-    let manifest = null;
-    const manifestFile = path.join(manifestFilesDir, 'manifest-latest.json');
-    try {
-      manifest = await fs.readJson(manifestFile);
-    } catch (e) {
-      logger.error(`failed to read blockchain config file ${manifestFile}`, e);
-      return false; // fatal
-    }
-
-    if (!manifest) {
-      logger.error('configuration error: bad manifest file');
-      return false; // fatal, valid manifest required to proceed
-    }
-
-    // Remove stale entries
-    this._filterManifest(manifest);
-    this._storage.setItem(storageKeys.MANIFEST, manifest);
-
-    const xbridgeInfos = [];
-    const xbconfDir = path.join(manifestFilesDir, 'xbridge-confs');
-
-    // Read prepackaged xbridge confs
-    for (const t of manifest) {
-      const token = new Token(t);
-      if (!this._availableWallets.has(token.ticker))
-        continue; // skip unsupported tokens
-
-      let xbtext = '';
+  async init() {
+    // Retry getCoins at startup — master may not yet be listening (daemon spawn race)
+    const maxAttempts = 3;
+    let lastErr = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        xbtext = await fs.readFile(path.join(xbconfDir, token.xbridge_conf), 'utf8');
-      } catch (_err) {
-        continue; // skip bad confs
-      }
-      const xbInfo = this._parseXBridgeConf(xbtext);
-      if (xbInfo) {
-        xbInfo.ticker = token.ticker;
-        xbridgeInfos.push(xbInfo);
-      } else
-        logger.error(`failed to read xbridge info for ${token.ticker}`);
-    }
-
-    // Store xbridge data
-    this._storage.setItem(storageKeys.XBRIDGE_INFO, xbridgeInfos);
-    return true;
-  }
-
-  /**
-   * Get raw manifest data object.
-   * @returns {Array<Object>}
-   */
-  getManifest() {
-    const manifest = this._storage.getItem(storageKeys.MANIFEST);
-    if (!_.isArray(manifest))
-      return [];
-    return manifest;
-  }
-
-  /**
-   * Get the last known manifest hash.
-   * @returns {string}
-   */
-  getManifestHash() {
-    const hash = this._storage.getItem(storageKeys.MANIFEST_SHA);
-    if (!_.isString(hash))
-      return '';
-    return hash;
-  }
-
-  /**
-   * Get the xbridge info data provider.
-   * @returns {XBridgeInfo[]}
-   */
-  getXBridgeInfo() {
-    const xbinfo = this._storage.getItem(storageKeys.XBRIDGE_INFO);
-    const infos = [];
-    if (!_.isArray(xbinfo)) // do not process bad data
-      return infos;
-    for (const info of xbinfo)
-      infos.push(new XBridgeInfo(info));
-    return infos;
-  }
-
-  /**
-   * Fetches the latest manifest hash from the endpoint and checks
-   * if it matches the hash we currently have. Updates the datastore
-   * with the latest manifest hash.
-   * @param req {function}
-   * @returns {Promise<boolean>}
-   */
-  async needsUpdate(req) {
-    const currentHash = this.getManifestHash();
-    const manifestHash = await this.fetchManifestHash(req);
-    return currentHash !== manifestHash;
-  }
-
-  /**
-   * Fetch the latest manifest hash.
-   * @param req {function}
-   * @returns {Promise<string>}
-   */
-  async fetchManifestHash(req) {
-    let manifestHash = '';
-    try {
-      const res = await req();
-      manifestHash = res.headers['x-amz-meta-x-manifest-hash'];
-    } catch (err) {
-      logger.error('', err);
-    }
-    return manifestHash;
-  }
-
-  /**
-   * Update the manifest to the latest.
-   * @return {Promise<void>}
-   */
-  async updateManifest() {
-    const manifestUrl = 'https://s3.amazonaws.com/blockdxbuilds/blockchainconfig/blockchainconfigfilehashmap.json';
-    const manifestConfPrefix = 'https://s3.amazonaws.com/blockdxbuilds/blockchainconfig/files/xbridge-confs/';
-    const manifestHeadReq = async () => { return await request.head(manifestUrl).timeout(30000); };
-    if (await this.needsUpdate(manifestHeadReq)) {
-      const confRequest = async (url) => { return await request.get(url).accept('text/plain').timeout(HTTP_REQUEST_TIMEOUT); };
-      await this.updateLatest(manifestUrl, manifestConfPrefix, this.getManifestHash(), 'manifest-latest.json', confRequest);
-    }
-  }
-
-  /**
-   * Downloads and caches the latest token manifest.
-   * @param manifestUrl {string}
-   * @param manifestConfPrefix {string}
-   * @param manifestHash {string}
-   * @param manifestKey {string}
-   * @param req {function} Manifest data request func
-   * @returns {Promise<boolean>}
-   */
-  async updateLatest(manifestUrl, manifestConfPrefix, manifestHash, manifestKey, req) {
-    let manifestData = null;
-    try {
-      // Get manifest
-      const res = await req(manifestUrl);
-      manifestData = JSON.parse(res.text);
-    } catch (err) {
-      logger.error('failed to download latest manifest hash', err);
-      return false;
-    }
-
-    let manifest = null;
-    try {
-      // Download manifest data (array of token objects)
-      const manifestDataUrl = manifestData[manifestKey][1];
-      const res = await req(manifestDataUrl);
-      manifest = JSON.parse(res.text);
-    } catch (err) {
-      logger.error('failed to download latest manifest json', err);
-      return false;
-    }
-
-    // Store manifest and hash only on successful response
-    if (_.isArray(manifest) && manifest.length > 0) {
-      this._filterManifest(manifest);
-
-      // Pull the wallet confs for available wallets and get fee information.
-      const xbridgeInfos = [];
-      for (const t of manifest) {
-        const token = new Token(t);
-        if (!this._availableWallets.has(token.ticker))
-          continue; // skip unknown tokens
-
-        let res;
-        try {
-          res = await req(manifestConfPrefix + token.xbridge_conf);
-        } catch (e) {
-          logger.error(`failed to download xbridge info for ${token.ticker}`, e);
-          continue;
+        const cfg = new ConfigHelper('master');
+        const port = cfg.getMasterRpcPort();
+        const user = cfg.getRpcUsername();
+        const pass = cfg.getRpcPassword();
+        const rpc = new RPCController(port, user, pass);
+        const dtos = await rpc.getCoins();
+        if (!Array.isArray(dtos))
+          throw new Error('getCoins returned non-array');
+        // Validate DTO shape (daemon 11-field: ticker,blockchain,verId,addressPrefix,scriptPrefix,secretPrefix,coin,feePerByte,minTxFee,port,dustAmount)
+        for (const d of dtos) {
+          if (!d.ticker || typeof d.blockchain === 'undefined' || typeof d.verId === 'undefined'
+              || typeof d.addressPrefix === 'undefined' || typeof d.scriptPrefix === 'undefined'
+              || typeof d.secretPrefix === 'undefined' || typeof d.coin === 'undefined'
+              || typeof d.feePerByte === 'undefined' || typeof d.minTxFee === 'undefined'
+              || typeof d.port === 'undefined')
+            throw new Error(`malformed DTO for ${d.ticker}`);
+          // Normalize dustAmount to number|null for downstream isDust (bcf 0 already mapped to null in daemon toDtoMap)
+          if (d.dustAmount != null && typeof d.dustAmount !== 'number')
+            throw new Error(`malformed dustAmount for ${d.ticker}`);
         }
-        const xbInfo = this._parseXBridgeConf(res.text);
-        if (xbInfo) {
-          xbInfo.ticker = token.ticker;
-          xbridgeInfos.push(xbInfo);
-        } else
-          logger.error(`failed to read xbridge info for ${token.ticker}`);
+        this._storage.setItem(storageKeys.COIN_CONFIGS, dtos);
+        return true;
+      } catch (e) {
+        lastErr = e;
+        if (attempt < maxAttempts)
+          await new Promise(r => setTimeout(r, 500 * attempt));
       }
-
-      // Store xbridge data
-      this._storage.setItem(storageKeys.MANIFEST_SHA, manifestHash);
-      this._storage.setItem(storageKeys.MANIFEST, manifest);
-      const existing = this.getXBridgeInfo();
-      const unique = new Map(existing.map(xb => [xb.ticker, xb]));
-      for (const xbinfo of xbridgeInfos) // overwrite existing, add new
-        unique.set(xbinfo.ticker, xbinfo);
-      this._storage.setItem(storageKeys.XBRIDGE_INFO, Array.from(unique.values()));
-
+    }
+    logger.error(`ConfController init failed (getCoins): ${lastErr?.message ?? String(lastErr)}`);
+    const cached = this._storage.getItem(storageKeys.COIN_CONFIGS);
+    if (_.isArray(cached) && cached.length > 0) {
+      logger.warn('using cached COIN_CONFIGS');
       return true;
     }
-
+    const legacy = this._storage.getItem(storageKeys.MANIFEST);
+    if (_.isArray(legacy) && legacy.length > 0) {
+      logger.warn('using legacy MANIFEST — daemon upgrade required for getCoins');
+      return true;
+    }
     return false;
   }
 
   /**
-   * Read and parse the xbridge conf.
-   * Sample data:
-   * [BLOCK]
-   * Title=Blocknet
-   * Address=
-   * Ip=127.0.0.1
-   * Port=41414
-   * Username=
-   * Password=
-   * AddressPrefix=26
-   * ScriptPrefix=28
-   * SecretPrefix=154
-   * COIN=100000000
-   * MinimumAmount=0
-   * TxVersion=1
-   * DustAmount=0
-   * CreateTxMethod=BTC
-   * GetNewKeySupported=true
-   * ImportWithNoScanSupported=true
-   * MinTxFee=10000
-   * BlockTime=60
-   * FeePerByte=20
-   * Confirmations=0
-   *
-   * @param data
-   * @return {XBridgeInfo|null}
-   * @private
+   * Get manifest-like array derived from COIN_CONFIGS DTOs for TokenManifest compat.
+   * Synthetic xbridge_conf is not used for file lookup (daemon is source) — kept for Token shape compat only.
+   * DTO fields verified against daemon getCoins serialization (verId, feePerByte, port, coin, dustAmount) at init().
+   * @returns {Array<Object>}
    */
-  _parseXBridgeConf(data) {
-    const xbconf = [];
-    let l = '';
-    let p = '';
-    for (const ch of data) {
-      const l1 = /\s/.test(ch);
-      const l2 = p+ch === '\\n' || p+ch === '\\r';
-      if (l1 || l2) {
-        if (l2) // remove the last char if it's l2 whitespace
-          l = l.slice(0, l.length-1);
-        if (!/^\s*$/.test(l)) // if not empty/whitespace
-          xbconf.push(l);
-        l = '';
-        p = '';
-        continue;
-      }
-      l += ch;
-      p = ch;
+  getManifest() {
+    const dtos = this._storage.getItem(storageKeys.COIN_CONFIGS);
+    if (_.isArray(dtos) && dtos.length > 0) {
+      return dtos.map(d => ({
+        blockchain: d.blockchain,
+        ticker: d.ticker,
+        ver_id: d.verId,
+        ver_name: '',
+        conf_name: '',
+        dir_name_linux: '',
+        dir_name_mac: '',
+        dir_name_win: '',
+        repo_url: '',
+        versions: [],
+        xbridge_conf: `${String(d.ticker).toLowerCase()}--${d.verId}.conf`,
+        wallet_conf: ''
+      }));
     }
+    const legacy = this._storage.getItem(storageKeys.MANIFEST);
+    if (_.isArray(legacy))
+      return legacy;
+    return [];
+  }
 
-    let matchfpb = null;
-    let matchminfee = null;
-    let matchcoin = null;
-    let matchport = null;
-    for (const line of xbconf) {
-      if (!matchfpb)
-        matchfpb = line.match(this._reFpb);
-      if (!matchminfee)
-        matchminfee = line.match(this._reMtf);
-      if (!matchcoin)
-        matchcoin = line.match(this._reCoin);
-      if (!matchport)
-        matchport = line.match(this._rePort);
-    }
-    if (matchfpb && matchminfee && matchcoin && matchport) {
-      return new XBridgeInfo({
-        feeperbyte: Number(matchfpb[1]),
-        mintxfee: Number(matchminfee[1]),
-        coin: Number(matchcoin[1]),
-        rpcport: Number(matchport[1]),
-      });
-    }
-
-    return null;
+  getManifestHash() {
+    // Deprecated — MANIFEST_SHA removed with vendored BCF; keep IPC for compat
+    return '';
   }
 
   /**
-   * Removes all non-latest manifest entries.
-   * @param manifest
-   * @private
+   * Get XBridgeInfo array derived from COIN_CONFIGS DTOs.
+   * @returns {XBridgeInfo[]}
    */
-  _filterManifest(manifest) {
-    // Filter latest from manifest, only keep the latest conf versions
-    manifest.sort((a,b) => a.xbridge_conf.localeCompare(b.xbridge_conf, 'en', { numeric: true }));
-    const have = new Set();
-    for (let i = manifest.length - 1; i >= 0; i--) {
-      const token = manifest[i];
-      if (have.has(token.ticker)) {
-        manifest.splice(i, 1); // remove this conf, it's not the latest
-        continue;
-      }
-      have.add(token.ticker);
+  getXBridgeInfo() {
+    const dtos = this._storage.getItem(storageKeys.COIN_CONFIGS);
+    if (_.isArray(dtos) && dtos.length > 0) {
+      return dtos.map(d => new XBridgeInfo({
+        ticker: d.ticker,
+        feeperbyte: d.feePerByte,
+        mintxfee: d.minTxFee,
+        coin: d.coin,
+        rpcport: d.port,
+        dustAmount: d.dustAmount
+      }));
     }
+    const legacy = this._storage.getItem(storageKeys.XBRIDGE_INFO);
+    if (_.isArray(legacy))
+      return legacy.map(info => new XBridgeInfo(info));
+    return [];
+  }
+
+  getCoinConfigs() {
+    const v = this._storage.getItem(storageKeys.COIN_CONFIGS);
+    if (_.isArray(v))
+      return v;
+    return [];
   }
 }
 

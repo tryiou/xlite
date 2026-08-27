@@ -14,7 +14,6 @@ export default [
       'bin/**',
       '.idea/**',
       '.roo/**',
-      'blockchain-configuration-files/**',
       'docs/**',
       'native-build-scripts/**',
     ],

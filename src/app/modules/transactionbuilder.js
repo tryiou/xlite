@@ -286,16 +286,24 @@ class TransactionBuilder {
   }
 
   /**
-   * Returns true if amount is dust.
+   * Returns true if amount is dust. Uses daemon dustAmount when present and
+   * non-zero, else hardcoded DUST_SATOSHIS fallback. bcf DustAmount is
+   * canonical source of truth (interim data carries 0 placeholders meaning
+   * unspecified → fallback, until bcf populated with real per-coin values;
+   * see CoinConfig.toDtoMap interim 0→null mapping).
    * @param amount {number}
    * @return {boolean}
    */
   isDust(amount) {
-    // TODO Potentially pull dust amount from xbridge conf
+    if (!this._feeInfo || !this._feeInfo.coin)
+      return math.smallerEq(bignumber(amount), math.divide(bignumber(DUST_SATOSHIS), bignumber(1e8)));
+    const dustSat = (this._feeInfo.dustAmount != null && this._feeInfo.dustAmount !== 0)
+      ? this._feeInfo.dustAmount
+      : DUST_SATOSHIS;
     return math
       .smallerEq(
         bignumber(amount),
-        math.divide(bignumber(DUST_SATOSHIS), bignumber(this._feeInfo.coin))
+        math.divide(bignumber(dustSat), bignumber(this._feeInfo.coin))
       );
   }
 

@@ -17,5 +17,4 @@ const copyDir = async (srcDir, distDir, ignores) => {
 };
 (async function() {
   await copyDir(path.resolve(__dirname, '../src'), path.resolve(__dirname, '../dist'), new Set(['app', 'scss']));
-  await copyDir(path.resolve(__dirname, '../blockchain-configuration-files'), path.resolve(__dirname, '../dist/blockchain-configuration-files'), new Set());
 })();
