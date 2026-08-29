@@ -116,13 +116,13 @@ export const setCurrencyMultipliers = multipliers => ({
 });
 
 /**
- * @param cloudChains {CloudChains}
- * @returns {{payload: {cloudChains: CloudChains}, type: string}}
+ * @param xliteDaemon {XliteDaemon}
+ * @returns {{payload: {xliteDaemon: XliteDaemon}, type: string}}
  */
-export const setCloudChains = cloudChains => ({
-  type: actions.SET_CLOUDCHAINS,
+export const setXliteDaemon = xliteDaemon => ({
+  type: actions.SET_XLITE_DAEMON,
   payload: {
-    cloudChains
+    xliteDaemon
   }
 });
 

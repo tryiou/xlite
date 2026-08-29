@@ -9,7 +9,7 @@ calls. All blockchain data flows GUI → local JSON-RPC → xlite-daemon → exr
 `/xrs/*` → plugin-adapter → utxo-plugin.
 
 Layout: `src/server/` is the Electron main process (daemon lifecycle
-`cloudchains.js`, stdout protocol `daemon-protocol.js`, RPC `rpc-controller.js`);
+`xlite-daemon.js`, stdout protocol `daemon-protocol.js`, RPC `rpc-controller.js`);
 `src/app/` is the renderer (React components/redux); `src/scss/` styles.
 
 ## Commands
@@ -44,7 +44,7 @@ npx vitest run     # modern unit suite (tests/unit/)  [also test:vitest*]
   UNSUPPORTEDCOIN. A daemon log-format change breaks wallet unlock/create flows.
 - Local JSON-RPC: master port 9955 (`DEFAULT_MASTER_PORT`,
   `src/app/constants/index.js`) plus per-coin rpcPorts; process lifecycle lives
-  in `src/server/modules/cloudchains.js`.
+  in `src/server/modules/xlite-daemon.js`.
 
 ## Packaging
 

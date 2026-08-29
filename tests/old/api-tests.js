@@ -19,18 +19,18 @@ describe('Api Test Suite', function() {
   });
   it('Api()', function() {
     const err = {some: 'error'};
-    const cloudChains = {'cc': true};
+    const xliteDaemon = {'cc': true};
     const confController = {'c': true};
     const walletController = {'w': true};
     const zoomController = {'z': true};
     const contextMenu = new ContextMenu();
-    const api = new Api(storage, app, proc, err, cloudChains, confController, walletController, zoomController, null, null, contextMenu);
+    const api = new Api(storage, app, proc, err, xliteDaemon, confController, walletController, zoomController, null, null, contextMenu);
     api._storage.should.be.instanceof(SimpleStorage);
     api._app.quit.should.be.a.Function();
     api._proc.on.should.be.a.Function();
     api._proc.handle.should.be.a.Function();
     api._err.should.be.eql(err);
-    api._cloudChains.should.be.eql(cloudChains);
+    api._xliteDaemon.should.be.eql(xliteDaemon);
     api._confController.should.be.eql(confController);
     api._walletController.should.be.eql(walletController);
     api._zoomController.should.be.eql(zoomController);

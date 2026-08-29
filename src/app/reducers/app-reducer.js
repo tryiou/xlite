@@ -6,7 +6,7 @@ import { Map } from 'immutable';
 import TokenManifest from '../modules/token-manifest';
 
 const getInitialState = () => ({
-  cloudChains: null,
+  xliteDaemon: null,
   startupInit: null,
   ccWalletStarted: false,
   activeView: '',
@@ -90,10 +90,10 @@ export default (state = getInitialState(), { type, payload }) => {
         ...state,
         currencyMultipliers: payload.multipliers
       };
-    case actions.SET_CLOUDCHAINS:
+    case actions.SET_XLITE_DAEMON:
       return {
         ...state,
-        cloudChains: payload.cloudChains
+        xliteDaemon: payload.xliteDaemon
       };
     case actions.SET_STARTUP_INIT:
       return {

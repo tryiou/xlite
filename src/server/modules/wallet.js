@@ -62,7 +62,7 @@ class Wallet {
   name = '';
 
   /**
-   * Associated cloudchains wallet conf.
+   * Associated xlite-daemon wallet conf.
    * @type {CCWalletConf}
    */
   _conf = null;
@@ -153,7 +153,7 @@ class Wallet {
     if (!this.rpcEnabled() || _.isNull(this._token.xbinfo) || _.isUndefined(this._token.xbinfo))
       return;
     // Set the default port to the xbridge conf port settings if the
-    // cloudchains conf port is invalid.
+    // xlite-daemon conf port is invalid.
     this.rpc = new RPCController(this._conf.rpcPort, this._conf.rpcUsername, this._conf.rpcPassword, this._debugMode);
   }
 

@@ -5,9 +5,9 @@ import './modules/env-paths'; // must precede ./constants & path consumers: redi
 import {publicPath} from './util/public-path'; // must be at top
 import Api from './modules/api';
 import {apiConstants} from '../app/api';
-import CloudChains from './modules/cloudchains';
+import XliteDaemon from './modules/xlite-daemon.js';
 import {DATA_DIR, DEBUG_ENV, getLocaleData, storageKeys} from './constants';
-import {DEFAULT_LOCALE, DEFAULT_ZOOM_FACTOR} from '../app/constants';
+import {DEFAULT_LOCALE, DEFAULT_ZOOM_FACTOR, UNKNOWN_XLITE_DAEMON_VERSION} from '../app/constants';
 import Localize from '../app/components/shared/localize';
 import {logger} from './modules/logger';
 import openAppWindow from './windows/app-window';
@@ -80,15 +80,15 @@ Localize.initialize({
   localeData: getLocaleData(locale)
 });
 
-// Create CloudChains conf manager
-const cloudChains = new CloudChains(CloudChains.defaultPathFunc, storage);
+// Create xlite-daemon conf manager
+const xliteDaemon = new XliteDaemon(XliteDaemon.defaultPathFunc, storage);
 
 // Set env password
-const { CC_WALLET_PASS = '' } = process.env;
-if (CC_WALLET_PASS !== '') {
-  cloudChains.setEnvPassword(CC_WALLET_PASS);
-  if (!cloudChains.saveWalletCredentials(CC_WALLET_PASS, null))
-    logger.error('failed to save CC_WALLET_PASS wallet credentials');
+const { XLITE_DAEMON_WALLET_PASS = '' } = process.env;
+if (XLITE_DAEMON_WALLET_PASS !== '') {
+  xliteDaemon.setEnvPassword(XLITE_DAEMON_WALLET_PASS);
+  if (!xliteDaemon.saveWalletCredentials(XLITE_DAEMON_WALLET_PASS, null))
+    logger.error('failed to save XLITE_DAEMON_WALLET_PASS wallet credentials');
 }
 
 // Handle zoom changes
@@ -121,9 +121,9 @@ const startup = async () => {
     logger.error(e);
   }
 
-  if (!cloudChains.isInstalled() || !cloudChains.hasSettings()) {
-    logger.info('No CloudChains installation found, installing wallet configs');
-    cloudChains.setNewInstall();
+  if (!xliteDaemon.isInstalled() || !xliteDaemon.hasSettings()) {
+    logger.info('No xlite-daemon installation found, installing wallet configs');
+    xliteDaemon.setNewInstall();
     // clear install specific storage parameters
     storage.setItems({
       [storageKeys.MANIFEST]: null,
@@ -136,20 +136,20 @@ const startup = async () => {
       [storageKeys.ALT_CURRENCY_MULTIPLIERS]: null,
     });
 
-    if (!await cloudChains.enableAllWallets()) {
+    if (!await xliteDaemon.enableAllWallets()) {
       // Fatal error, warn user and exit program
       displayFatalError = makeError(Localize.text('Install Issue'),
-        Localize.text('The CloudChains Litewallet daemon failed to write to wallet configuration files. ' +
+        Localize.text('The xlite-daemon failed to write to wallet configuration files. ' +
           'Does it have the proper permissions? Please reinstall.'));
       return;
     }
 
     try {
-      cloudChains.loadConfs();
+      xliteDaemon.loadConfs();
     } catch (_err) {
       logger.error('Problem loading configs');
       // Fatal error, warn user and exit program
-      displayFatalError = makeError(Localize.text('Issue'), Localize.text('The CloudChains Litewallet configs failed to load.'));
+      displayFatalError = makeError(Localize.text('Issue'), Localize.text('The xlite-daemon configs failed to load.'));
       return;
     }
 
@@ -160,50 +160,50 @@ const startup = async () => {
 
     // Update confs with manifest data (daemon owns rpcPort, loadConfs patches only addressCount)
     try {
-      cloudChains.loadConfs(new TokenManifest(confController.getManifest(), confController.getXBridgeInfo()));
+      xliteDaemon.loadConfs(new TokenManifest(confController.getManifest(), confController.getXBridgeInfo()));
     } catch (_err) {
       logger.error('Problem updating configs');
       // Fatal error, warn user and exit program
-      displayFatalError = makeError(Localize.text('Issue'), Localize.text('The CloudChains Litewallet configs failed to update.'));
+      displayFatalError = makeError(Localize.text('Issue'), Localize.text('The xlite-daemon configs failed to update.'));
       return;
     }
 
-    logger.info('Enabling all CloudChains wallets');
-    logger.info('Enabling CloudChains master RPC server');
+    logger.info('Enabling all xlite-daemon wallets');
+    logger.info('Enabling xlite-daemon master RPC server');
 
     // cc found but missing settings
-    if (!cloudChains.hasSettings()) {
-      logger.error('No CloudChains settings found');
+    if (!xliteDaemon.hasSettings()) {
+      logger.error('No xlite-daemon settings found');
       // Fatal error, warn user and exit program
-      displayFatalError = makeError(Localize.text('Install Issue'), Localize.text('The CloudChains Litewallet daemon missing. Please reinstall.'));
+      displayFatalError = makeError(Localize.text('Install Issue'), Localize.text('The xlite-daemon missing. Please reinstall.'));
       return;
     }
   } else { // if not first time install
     // Load latest configuration prior to any further initialization
     try {
-      cloudChains.loadConfs();
+      xliteDaemon.loadConfs();
     } catch (_err) {
       logger.error('Problem loading configs');
       // Fatal error, warn user and exit program
-      displayFatalError = makeError(Localize.text('Issue'), Localize.text('The CloudChains Litewallet configs failed to load.'));
+      displayFatalError = makeError(Localize.text('Issue'), Localize.text('The xlite-daemon configs failed to load.'));
       return;
     }
   }
 
-  if (!await cloudChains.isWalletRPCRunning()) {
-    const binFilePath = cloudChains.getCCSPVFilePath();
+  if (!await xliteDaemon.isWalletRPCRunning()) {
+    const binFilePath = xliteDaemon.getXliteDaemonFilePath ? xliteDaemon.getXliteDaemonFilePath() : xliteDaemon.getCCSPVFilePath();
     const exists = await fs.pathExists(binFilePath);
     if (!exists) {
-      logger.error(`Unable to find CloudChains Litewallet at ${binFilePath}`);
-      displayFatalError = makeError(Localize.text('Issue'), Localize.text(`Failed to locate the CloudChains Litewallet at ${binFilePath}.`));
+      logger.error(`Unable to find xlite-daemon at ${binFilePath}`);
+      displayFatalError = makeError(Localize.text('Issue'), Localize.text(`Failed to locate the xlite-daemon at ${binFilePath}.`));
       return;
     }
   }
 
   // No need to await and hold up the whole process for this
-  cloudChains.getCCSPVVersion()
-    .then(ccVersion => {
-      logger.info(`Using CloudChains daemon v${ccVersion}`);
+  xliteDaemon.getXliteDaemonVersion()
+    .then(xliteDaemonVersion => {
+      logger.info(`Using xlite-daemon v${xliteDaemonVersion}`);
     })
     .catch(err => {
       logger.error(err);
@@ -215,7 +215,7 @@ const startup = async () => {
   // Create the token manifest from the coin configs (daemon getCoins 11-field DTO)
   const tokenManifest = new TokenManifest(confController.getManifest(), confController.getXBridgeInfo());
   // Create the wallet controller
-  walletController = new WalletController(cloudChains, tokenManifest, storage, debug);
+  walletController = new WalletController(xliteDaemon, tokenManifest, storage, debug);
 };
 
 // Start the application
@@ -236,7 +236,7 @@ app.on('ready', async () => {
       // anything) has no child handle, and only stopSPV() knows how to stop
       // it via RPC. It cheaply no-ops when nothing is running.
       try {
-        if (!(await cloudChains.stopSPV())) {
+        if (!(await xliteDaemon.stopSPV())) {
           logger.error('failed to stop the wallet daemon');
         } else {
           logger.info('wallet shutdown');
@@ -250,7 +250,7 @@ app.on('ready', async () => {
   // displayFatalError = makeError('Test', '123'); // force debug error screen
   // Create the api — instance registers IPC handlers as a side effect
   new Api(storage, app, ipcMain, displayFatalError,
-    cloudChains,
+    xliteDaemon,
     confController,
     walletController,
     zoomController,

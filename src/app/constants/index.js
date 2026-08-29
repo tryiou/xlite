@@ -23,7 +23,7 @@ export const actions = {
   SET_SHOW_RECEIVE_MODAL: 'SET_SHOW_RECEIVE_MODAL',
   SET_SHOW_SEND_MODAL: 'SET_SHOW_SEND_MODAL',
   SET_CURRENCY_MULTIPLIERS: 'SET_CURRENCY_MULTIPLIERS',
-  SET_CLOUDCHAINS: 'SET_CLOUDCHAINS',
+  SET_XLITE_DAEMON: 'SET_XLITE_DAEMON',
   SET_STARTUP_INIT: 'SET_STARTUP_INIT',
   SET_WALLET_CONTROLLER: 'SET_WALLET_CONTROLLER',
   SET_SHOW_SETTINGS: 'SET_SHOW_SETTINGS',
@@ -126,9 +126,13 @@ export const ccBinNames = {
   linux: 'xlite-daemon-linux64'
 };
 
+export const daemonBinDirs = ccBinDirs;
+export const daemonBinNames = ccBinNames;
+
 export const DEFAULT_MASTER_PORT = 9955;
 
 export const UNKNOWN_CC_VERSION = 'unknown';
+export const UNKNOWN_XLITE_DAEMON_VERSION = UNKNOWN_CC_VERSION;
 
 export const SIDEBAR_WIDTH = 240;
 

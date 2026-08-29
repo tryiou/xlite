@@ -118,11 +118,11 @@ describe('daemon-protocol: stop signal', () => {
 describe('daemon-protocol: stop signal usage contract', () => {
   // The constant is only meaningful if every stop path uses it. Reading
   // the module source as data pins that contract without needing to
-  // boot the full cloudchains module graph (electron et al.) in tests.
+  // boot the full xlite-daemon module graph (electron et al.) in tests.
   const fs = require('fs');
   const path = require('path');
   const src = fs.readFileSync(
-    path.join(__dirname, '../../../src/server/modules/cloudchains.js'),
+    path.join(__dirname, '../../../src/server/modules/xlite-daemon.js'),
     'utf8'
   );
 
@@ -139,7 +139,7 @@ describe('daemon-protocol: stop-signal hygiene', () => {
   const fs = require('fs');
   const path = require('path');
   const src = fs.readFileSync(
-    path.join(__dirname, '../../../src/server/modules/cloudchains.js'),
+    path.join(__dirname, '../../../src/server/modules/xlite-daemon.js'),
     'utf8'
   );
 
@@ -152,7 +152,7 @@ describe('daemon-protocol: stop-signal hygiene', () => {
     // settle() before its const declaration (TDZ ReferenceError),
     // leaving the outer promise pending forever on packaged builds.
     const fn = src.slice(src.indexOf('startSPV('),
-                         src.indexOf("logger.info('Starting CloudChains daemon')"));
+                         src.indexOf("logger.info('Starting xlite-daemon daemon')"));
     const declareAt = fn.indexOf('const settle =');
     const firstUseAt = fn.indexOf('settle(false)');
     expect(declareAt).toBeGreaterThan(-1);

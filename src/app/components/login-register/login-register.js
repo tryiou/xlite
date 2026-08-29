@@ -5,7 +5,7 @@ import Localize from '../shared/localize';
 import IconArrowRight from '../shared/icon-arrow-right';
 import { logger } from '../../modules/logger-r';
 import Logo from '../shared/logo';
-import CloudChains from '../../modules/cloudchains-r';
+import XliteDaemon from '../../modules/xlite-daemon-r.js';
 import { Button } from '../shared/buttons';
 import Spinner from '../shared/spinner';
 
@@ -87,7 +87,7 @@ const okIconWidth = 20;
 const OkIcon = () => <i className={'fas fa-check lw-color-positive-1'} style={{ width: okIconWidth }} />;
 const NotOkIcon = () => <i className={'fas fa-times color-negative'} style={{ width: okIconWidth }} />;
 
-const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
+const LoginRegister = ({ xliteDaemon, startupInit, setCCWalletStarted }) => {
 
   const [initialLoadStep1, setInitialLoadStep1] = useState(false);
   const [initialLoadStep2, setInitialLoadStep2] = useState(false);
@@ -97,9 +97,9 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [processing, setProcessing] = useState(false);
   const [mnemonic, setMnemonic] = useState('');
-  const [cloudChainsWalletCreated, setCloudChainsWalletCreated] = useState(false);
-  const [cloudChainsIsWalletRPCRunning, setCloudChainsIsWalletRPCRunning] = useState(false);
-  const [cloudChainsStoredPassword, setCloudChainsStoredPassword] = useState(false);
+  const [xliteDaemonWalletCreated, setXliteDaemonWalletCreated] = useState(false);
+  const [xliteDaemonIsWalletRPCRunning, setXliteDaemonIsWalletRPCRunning] = useState(false);
+  const [xliteDaemonStoredPassword, setXliteDaemonStoredPassword] = useState(false);
   const [createFromMnemonic, setCreateFromMnemonic] = useState(false);
   const [restoreFromMnemonic, setRestoreFromMnemonic] = useState(false);
   const [newMnemonic, setNewMnemonic] = useState('');
@@ -119,15 +119,15 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
   const onLoginSubmit = useCallback(async () => {
     setProcessing(true);
 
-    const storedPassword = await cloudChains.getStoredPassword();
-    const rpcRunning = await cloudChains.isWalletRPCRunning();
+    const storedPassword = await xliteDaemon.getStoredPassword();
+    const rpcRunning = await xliteDaemon.isWalletRPCRunning();
 
     if (!rpcRunning) {
-      const started = await cloudChains.startSPV(password);
+      const started = await xliteDaemon.startSPV(password);
       if (!started) {
         setErrorMessage(storedPassword
           ? Localize.text('Invalid password.', 'login')
-          : Localize.text('Failed to start CloudChains daemon.', 'login'));
+          : Localize.text('Failed to start xlite-daemon.', 'login'));
         setProcessing(false);
         return;
       }
@@ -139,7 +139,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       // Adopted/already-running wallet: the submitted password must still
       // be verified — without this, ANY password "logged in" to an
       // already-unlocked daemon.
-      const passwordOk = await cloudChains.matchesStoredPassword(password);
+      const passwordOk = await xliteDaemon.matchesStoredPassword(password);
       if (!passwordOk) {
         setErrorMessage(Localize.text('Invalid password.', 'login'));
         setProcessing(false);
@@ -147,17 +147,17 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       }
     }
 
-    const walletCreated = await cloudChains.isWalletCreated();
-    const isRpcRunning = await cloudChains.isWalletRPCRunning();
-    setCloudChainsWalletCreated(walletCreated);
-    setCloudChainsIsWalletRPCRunning(isRpcRunning);
+    const walletCreated = await xliteDaemon.isWalletCreated();
+    const isRpcRunning = await xliteDaemon.isWalletRPCRunning();
+    setXliteDaemonWalletCreated(walletCreated);
+    setXliteDaemonIsWalletRPCRunning(isRpcRunning);
 
     await Promise.race([
       startupInit(),
       timeout(2000),
     ]);
     setCCWalletStarted(true);
-  }, [cloudChains, password, startupInit, setCCWalletStarted]);
+  }, [xliteDaemon, password, startupInit, setCCWalletStarted]);
 
   // Keep the ref in sync for async setTimeout calls that need the latest closure
   useEffect(() => {
@@ -166,27 +166,27 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
 
   // The component requires additional data before rendering
   useEffect(() => {
-    if (!cloudChains || initialLoadStep1)
+    if (!xliteDaemon || initialLoadStep1)
       return;
     setInitialLoadStep1(true);
-    Promise.all([api.env_shouldAutoLogin(), cloudChains.getStoredPassword(), cloudChains.isWalletCreated(), cloudChains.isWalletRPCRunning()])
+    Promise.all([api.env_shouldAutoLogin(), xliteDaemon.getStoredPassword(), xliteDaemon.isWalletCreated(), xliteDaemon.isWalletRPCRunning()])
       .then(values => {
         const [shouldAutoLogin, storedPw, walletCreated, rpcRunning] = values;
-        setCloudChainsWalletCreated(walletCreated);
-        setCloudChainsIsWalletRPCRunning(rpcRunning);
-        setCloudChainsStoredPassword(!!storedPw);
+        setXliteDaemonWalletCreated(walletCreated);
+        setXliteDaemonIsWalletRPCRunning(rpcRunning);
+        setXliteDaemonStoredPassword(!!storedPw);
         setInitialLoadStep2(true); // done loading
 
-        // Auto-login when CC_WALLET_PASS and CC_WALLET_AUTOLOGIN env vars are set.
+        // Auto-login when XLITE_DAEMON_WALLET_PASS and XLITE_DAEMON_WALLET_AUTOLOGIN env vars are set.
         // The raw password never reaches the renderer — main process uses it internally.
         if (shouldAutoLogin) {
           setTimeout(() => { onLoginSubmitRef.current(); }, 250);
         }
       });
-  }, [cloudChains, initialLoadStep1, onLoginSubmit, setInitialLoadStep1, setInitialLoadStep2]);
+  }, [xliteDaemon, initialLoadStep1, onLoginSubmit, setInitialLoadStep1, setInitialLoadStep2]);
 
   // Do not show login until we have required data
-  if (!cloudChains || !startupInit || !initialLoadStep2)
+  if (!xliteDaemon || !startupInit || !initialLoadStep2)
     return <div><Spinner /></div>;
 
   const onRegisterSubmit = async function (e) {
@@ -212,7 +212,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
 
     let m;
     try {
-      m = await cloudChains.createSPVWallet(password, preppedMnemonic);
+      m = await xliteDaemon.createSPVWallet(password, preppedMnemonic);
     } catch (err) {
       setErrorMessage(err.message || Localize.text('There was a problem creating the wallet.', 'login'));
       setProcessing(false);
@@ -224,7 +224,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       return;
     }
 
-    if (!await cloudChains.saveWalletCredentials(password, null)) {
+    if (!await xliteDaemon.saveWalletCredentials(password, null)) {
       logger.error('failed to save the wallet credentials');
       setErrorMessage(Localize.text('Oops! There was a problem saving the wallet credentials.', 'login'));
       setProcessing(false);
@@ -232,7 +232,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
     }
 
     try {
-      await cloudChains.loadConfs(); // load all confs and update the master conf if necessary
+      await xliteDaemon.loadConfs(); // load all confs and update the master conf if necessary
     } catch {
       logger.error('Problem enabling master config.');
       setErrorMessage(Localize.text('Oops! There was a problem enabling the master config.', 'login'));
@@ -240,7 +240,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
       return;
     }
 
-    const started = await cloudChains.startSPV(password);
+    const started = await xliteDaemon.startSPV(password);
     if (!started) {
       setErrorMessage(Localize.text('Oops! There was a problem starting and unlocking the wallet.', 'login'));
       setProcessing(false);
@@ -248,24 +248,24 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
     }
 
     // if(preppedMnemonic) {
-    //   const addrSuccess = await cloudChains.setAllConfigAddressCounts();
+    //   const addrSuccess = await xliteDaemon.setAllConfigAddressCounts();
     //   if(!addrSuccess)
     //     logger.error('There was a problem setting all address config counts');
     // }
 
     setErrorMessage(''); // clear error on success
-    const storedPassword = await cloudChains.getStoredPassword();
-    const walletCreated = await cloudChains.isWalletCreated();
-    const isRpcRunning = await cloudChains.isWalletRPCRunning();
+    const storedPassword = await xliteDaemon.getStoredPassword();
+    const walletCreated = await xliteDaemon.isWalletCreated();
+    const isRpcRunning = await xliteDaemon.isWalletRPCRunning();
 
     await Promise.race([
       startupInit(true), // slow load
       timeout(12000),
     ]);
 
-    setCloudChainsStoredPassword(!!storedPassword && storedPassword !== '');
-    setCloudChainsWalletCreated(walletCreated);
-    setCloudChainsIsWalletRPCRunning(isRpcRunning);
+    setXliteDaemonStoredPassword(!!storedPassword && storedPassword !== '');
+    setXliteDaemonWalletCreated(walletCreated);
+    setXliteDaemonIsWalletRPCRunning(isRpcRunning);
     if (preppedMnemonic) { // If they entered their own mnemonic, just open the application
       setCCWalletStarted(true);
     } else { // If a new mnemonic was generated, show it to them
@@ -309,10 +309,10 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
   };
 
   // Show the login if the wallet was created or if the rpc is running
-  // and there's a known cloudchains password. Otherwise, show the
+  // and there's a known xlite-daemon password. Otherwise, show the
   // registration screen.
-  const showLogin = !restoreFromMnemonic && cloudChains && (cloudChainsWalletCreated || (cloudChainsIsWalletRPCRunning && cloudChainsStoredPassword));
-  const showRegistration = !showLogin && cloudChains && (restoreFromMnemonic || !cloudChainsWalletCreated);
+  const showLogin = !restoreFromMnemonic && xliteDaemon && (xliteDaemonWalletCreated || (xliteDaemonIsWalletRPCRunning && xliteDaemonStoredPassword));
+  const showRegistration = !showLogin && xliteDaemon && (restoreFromMnemonic || !xliteDaemonWalletCreated);
 
   const onMnemonicContextMenu = e => {
     e.preventDefault();
@@ -438,7 +438,7 @@ const LoginRegister = ({ cloudChains, startupInit, setCCWalletStarted }) => {
   );
 };
 LoginRegister.propTypes = {
-  cloudChains: PropTypes.instanceOf(CloudChains),
+  xliteDaemon: PropTypes.instanceOf(XliteDaemon),
   startupInit: PropTypes.func,
   setActiveView: PropTypes.func,
   setCCWalletStarted: PropTypes.func

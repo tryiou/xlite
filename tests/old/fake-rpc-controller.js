@@ -414,7 +414,7 @@ class FakeRPCController {
   }
 
   /**
-   * Call the CloudChains RPC help method.
+   * Call the xlite-daemon RPC help method.
    * @return {Promise<Object>}
    */
   async ccHelp() {

@@ -8,7 +8,7 @@ import path from 'path';
  *
  * When set, it replaces the platform application-data root for:
  *  - this GUI:   appData → $XLITE_DATA_HOME, userData → $XLITE_DATA_HOME/<appName>
- *  - xlite-daemon: its own state root ($XLITE_DATA_HOME/CloudChains), see
+ *  - xlite-daemon: its own state root ($XLITE_DATA_HOME/xlite-daemon), see
  *    App.resolveUserConfigDir() in the daemon source.
  *
  * This module MUST be imported before anything resolves

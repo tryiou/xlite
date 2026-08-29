@@ -443,7 +443,7 @@ class RPCController {
   }
 
   /**
-   * Call the CloudChains RPC help method.
+   * Call the xlite-daemon RPC help method.
    * @return {Promise<Object>}
    */
   async ccHelp() {
@@ -455,7 +455,7 @@ class RPCController {
   }
 
   /**
-   * Stop the CloudChains server daemon.
+   * Stop the xlite-daemon server daemon.
    * @return {Promise<boolean>}
    */
   async ccStop() {

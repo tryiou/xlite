@@ -9,7 +9,7 @@ import { connect } from 'react-redux';
 
 export default connect(
   ({ appState }) => ({
-    cloudChains: appState.cloudChains,
+    xliteDaemon: appState.xliteDaemon,
     startupInit: appState.startupInit,
   }),
   dispatch => ({

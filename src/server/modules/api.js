@@ -46,10 +46,10 @@ class Api {
   _err = null;
 
   /**
-   * @type {CloudChains}
+   * @type {XliteDaemon}
    * @private
    */
-  _cloudChains = null;
+  _xliteDaemon = null;
 
   /**
    * @type {ConfController}
@@ -112,7 +112,7 @@ class Api {
    * @param app {Electron.App}
    * @param proc {Electron.IpcMain}
    * @param err {Object} Must be null if not an error
-   * @param cloudChains {CloudChains}
+   * @param xliteDaemon {XliteDaemon}
    * @param confController {ConfController}
    * @param walletController {WalletController}
    * @param zoomController {ZoomController}
@@ -120,14 +120,14 @@ class Api {
    * @param shutdown {Object}
    */
   constructor(storage, app, proc, err,
-              cloudChains = null, confController = null,
+              xliteDaemon = null, confController = null,
               walletController = null, zoomController = null,
               pricing = null, shutdown = null, contextMenu, autoUpdater, Localize) {
     this._storage = storage;
     this._app = app;
     this._proc = proc;
     this._err = err;
-    this._cloudChains = cloudChains;
+    this._xliteDaemon = xliteDaemon;
     this._confController = confController;
     this._walletController = walletController;
     this._zoomController = zoomController;
@@ -203,8 +203,8 @@ class Api {
     if (this._err)
       return; // do not expose rest of api on error
 
-    if (this._cloudChains)
-      this._initCloudChains();
+    if (this._xliteDaemon)
+      this._initXliteDaemon();
     if (this._confController)
       this._initConfController();
     if (this._walletController) {
@@ -221,12 +221,12 @@ class Api {
    */
   _initEnv() {
     this._proc.handle(apiConstants.env_shouldAutoLogin, (evt, arg) => {
-      return !!process.env.CC_WALLET_PASS && process.env.CC_WALLET_AUTOLOGIN === 'true';
+      return !!process.env.XLITE_DAEMON_WALLET_PASS && process.env.XLITE_DAEMON_WALLET_AUTOLOGIN === 'true';
     });
     this._proc.on(apiConstants.env_resetAutoLogin, (evt, arg) => {
-      if (this._cloudChains)
-        this._cloudChains.clearEnvPassword();
-      process.env.CC_WALLET_AUTOLOGIN = '';
+      if (this._xliteDaemon)
+        this._xliteDaemon.clearEnvPassword();
+      process.env.XLITE_DAEMON_WALLET_AUTOLOGIN = '';
     });
   }
 
@@ -327,7 +327,7 @@ class Api {
     });
     this._proc.on(apiConstants.general_ccStartupError, async (e, dependencyMissing) => {
       if(process.platform === 'win32' && dependencyMissing) {
-        logger.info('VS 2010 dependency missing. Unable to run CC daemon. Shutting down.');
+        logger.info('VS 2010 dependency missing. Unable to run xlite-daemon. Shutting down.');
         const url = 'https://www.microsoft.com/download/details.aspx?id=26999';
         const { response } = await electron.dialog.showMessageBox({
           type: 'warning',
@@ -341,10 +341,10 @@ class Api {
         if(response === 0)
           electron.shell.openExternal(url);
       } else {
-        logger.info('Unable to run CC daemon. Shutting down.');
+        logger.info('Unable to run xlite-daemon. Shutting down.');
         await electron.dialog.showMessageBox({
           type: 'warning',
-          message: this._localize.text('Unable to start the CloudChains daemon. This is a fatal error. Please check the XLite logs for more information.'),
+          message: this._localize.text('Unable to start the xlite-daemon. This is a fatal error. Please check the XLite logs for more information.'),
           buttons: [
             this._localize.text('Close', 'universal'),
           ],
@@ -368,71 +368,71 @@ class Api {
   }
 
   /**
-   * CloudChains api handlers.
+   * xlite-daemon api handlers.
    * @private
    */
-  _initCloudChains() {
-    this._proc.handle(apiConstants.cloudChains_isInstalled, (evt, arg) => {
-      return this._cloudChains.isInstalled();
+  _initXliteDaemon() {
+    this._proc.handle(apiConstants.xliteDaemon_isInstalled, (evt, arg) => {
+      return this._xliteDaemon.isInstalled();
     });
-    this._proc.handle(apiConstants.cloudChains_hasSettings, (evt, arg) => {
-      return this._cloudChains.hasSettings();
+    this._proc.handle(apiConstants.xliteDaemon_hasSettings, (evt, arg) => {
+      return this._xliteDaemon.hasSettings();
     });
-    this._proc.handle(apiConstants.cloudChains_getWalletConf, async (evt, ticker) => {
-      return sanitize(await this._cloudChains.getWalletConf(ticker), Blacklist, Whitelist);
+    this._proc.handle(apiConstants.xliteDaemon_getWalletConf, async (evt, ticker) => {
+      return sanitize(await this._xliteDaemon.getWalletConf(ticker), Blacklist, Whitelist);
     });
-    this._proc.handle(apiConstants.cloudChains_getWalletConfs, async (evt, arg) => {
-      return sanitize(await this._cloudChains.getWalletConfs(), Blacklist, Whitelist);
+    this._proc.handle(apiConstants.xliteDaemon_getWalletConfs, async (evt, arg) => {
+      return sanitize(await this._xliteDaemon.getWalletConfs(), Blacklist, Whitelist);
     });
-    this._proc.handle(apiConstants.cloudChains_getMasterConf, async (evt, arg) => {
-      return sanitize(await this._cloudChains.getMasterConf(), Blacklist, Whitelist);
+    this._proc.handle(apiConstants.xliteDaemon_getMasterConf, async (evt, arg) => {
+      return sanitize(await this._xliteDaemon.getMasterConf(), Blacklist, Whitelist);
     });
-    this._proc.handle(apiConstants.cloudChains_isWalletCreated, (evt, arg) => {
-      return this._cloudChains.isWalletCreated();
+    this._proc.handle(apiConstants.xliteDaemon_isWalletCreated, (evt, arg) => {
+      return this._xliteDaemon.isWalletCreated();
     });
-    this._proc.handle(apiConstants.cloudChains_saveWalletCredentials, (evt, password, salt) => {
+    this._proc.handle(apiConstants.xliteDaemon_saveWalletCredentials, (evt, password, salt) => {
       if (!this._validateString(password, 'password'))
         return false;
       if (salt !== null && typeof salt !== 'string') {
         logger.error('Invalid argument: salt must be a string or null');
         return false;
       }
-      return this._cloudChains.saveWalletCredentials(password, salt);
+      return this._xliteDaemon.saveWalletCredentials(password, salt);
     });
-    this._proc.handle(apiConstants.cloudChains_getStoredPassword, (evt, arg) => {
-      return this._cloudChains.getStoredPassword();
+    this._proc.handle(apiConstants.xliteDaemon_getStoredPassword, (evt, arg) => {
+      return this._xliteDaemon.getStoredPassword();
     });
-    this._proc.handle(apiConstants.cloudChains_getStoredSalt, (evt, arg) => {
-      return this._cloudChains.getStoredSalt();
+    this._proc.handle(apiConstants.xliteDaemon_getStoredSalt, (evt, arg) => {
+      return this._xliteDaemon.getStoredSalt();
     });
-    this._proc.handle(apiConstants.cloudChains_getDecryptedMnemonic, (evt, password) => {
+    this._proc.handle(apiConstants.xliteDaemon_getDecryptedMnemonic, (evt, password) => {
       if (!this._validateString(password, 'password'))
         return null;
-      return this._cloudChains.getDecryptedMnemonic(password);
+      return this._xliteDaemon.getDecryptedMnemonic(password);
     });
-    this._proc.handle(apiConstants.cloudChains_loadConfs, (evt, arg) => {
-      return this._cloudChains.loadConfs();
+    this._proc.handle(apiConstants.xliteDaemon_loadConfs, (evt, arg) => {
+      return this._xliteDaemon.loadConfs();
     });
-    this._proc.handle(apiConstants.cloudChains_getCCSPVVersion, (evt, arg) => {
-      return this._cloudChains.getCCSPVVersion();
+    this._proc.handle(apiConstants.xliteDaemon_getXliteDaemonVersion, (evt, arg) => {
+      return this._xliteDaemon.getXliteDaemonVersion();
     });
-    this._proc.handle(apiConstants.cloudChains_isWalletRPCRunning, (evt, arg) => {
-      return this._cloudChains.isWalletRPCRunning();
+    this._proc.handle(apiConstants.xliteDaemon_isWalletRPCRunning, (evt, arg) => {
+      return this._xliteDaemon.isWalletRPCRunning();
     });
-    this._proc.handle(apiConstants.cloudChains_spvIsRunning, (evt, arg) => {
-      return this._cloudChains.spvIsRunning();
+    this._proc.handle(apiConstants.xliteDaemon_spvIsRunning, (evt, arg) => {
+      return this._xliteDaemon.spvIsRunning();
     });
-    this._proc.handle(apiConstants.cloudChains_startSPV, (evt, password) => {
+    this._proc.handle(apiConstants.xliteDaemon_startSPV, (evt, password) => {
       if (password !== null && typeof password !== 'string') {
         logger.error('Invalid argument: password must be a string');
         return false;
       }
-      return this._cloudChains.startSPV(password || '');
+      return this._xliteDaemon.startSPV(password || '');
     });
-    this._proc.handle(apiConstants.cloudChains_stopSPV, (evt, arg) => {
-      return this._cloudChains.stopSPV();
+    this._proc.handle(apiConstants.xliteDaemon_stopSPV, (evt, arg) => {
+      return this._xliteDaemon.stopSPV();
     });
-    this._proc.handle(apiConstants.cloudChains_createSPVWallet, (evt, password, mnemonic) => {
+    this._proc.handle(apiConstants.xliteDaemon_createSPVWallet, (evt, password, mnemonic) => {
       if (!this._validateString(password, 'password'))
         return false;
       if (mnemonic !== null && typeof mnemonic !== 'string') {
@@ -440,30 +440,30 @@ class Api {
         return false;
       }
       this._clearWalletStorage();
-      if (this._cloudChains.isInstalled() && !mnemonic)
+      if (this._xliteDaemon.isInstalled() && !mnemonic)
         logger.info('Wallet file exists before createSPVWallet - will be backed up');
-      return this._cloudChains.createSPVWallet(password, mnemonic);
+      return this._xliteDaemon.createSPVWallet(password, mnemonic);
     });
-    this._proc.handle(apiConstants.cloudChains_enableAllWallets, (evt, arg) => {
-      return this._cloudChains.enableAllWallets();
+    this._proc.handle(apiConstants.xliteDaemon_enableAllWallets, (evt, arg) => {
+      return this._xliteDaemon.enableAllWallets();
     });
-    this._proc.handle(apiConstants.cloudChains_changePassword, (evt, oldPassword, newPassword) => {
+    this._proc.handle(apiConstants.xliteDaemon_changePassword, (evt, oldPassword, newPassword) => {
       if (!this._validateString(oldPassword, 'oldPassword'))
         return false;
       if (!this._validateString(newPassword, 'newPassword'))
         return false;
-      return this._cloudChains.changePassword(oldPassword, newPassword);
+      return this._xliteDaemon.changePassword(oldPassword, newPassword);
     });
-    this._proc.handle(apiConstants.cloudChains_matchesStoredPassword, (evt, password) => {
+    this._proc.handle(apiConstants.xliteDaemon_matchesStoredPassword, (evt, password) => {
       if (!this._validateString(password, 'password'))
         return false;
-      return this._cloudChains.matchesStoredPassword(password);
+      return this._xliteDaemon.matchesStoredPassword(password);
     });
-    this._proc.handle(apiConstants.cloudChains_isNewInstall, (evt, arg) => {
-      return this._cloudChains.isNewInstall();
+    this._proc.handle(apiConstants.xliteDaemon_isNewInstall, (evt, arg) => {
+      return this._xliteDaemon.isNewInstall();
     });
-    this._proc.handle(apiConstants.cloudChains_setAllConfigAddressCounts, (evt, addressCount) => {
-      return this._cloudChains.setAllConfigAddressCounts(addressCount);
+    this._proc.handle(apiConstants.xliteDaemon_setAllConfigAddressCounts, (evt, addressCount) => {
+      return this._xliteDaemon.setAllConfigAddressCounts(addressCount);
     });
   }
 

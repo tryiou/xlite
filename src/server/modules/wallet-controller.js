@@ -20,10 +20,10 @@ class WalletController {
   _wallets = new Map();
 
   /**
-   * @type {CloudChains}
+   * @type {XliteDaemon}
    * @private
    */
-  _cloudChains = null;
+  _xliteDaemon = null;
 
   /**
    * @type {TokenManifest}
@@ -55,13 +55,13 @@ class WalletController {
 
   /**
    * Constructs a WalletController instance
-   * @param cloudChains {CloudChains}
+   * @param xliteDaemon {XliteDaemon}
    * @param manifest {TokenManifest}
    * @param storage {SimpleStorage}
    * @param debugMode {boolean}
    */
-  constructor(cloudChains, manifest, storage, debugMode = false) {
-    this._cloudChains = cloudChains;
+  constructor(xliteDaemon, manifest, storage, debugMode = false) {
+    this._xliteDaemon = xliteDaemon;
     this._manifest = manifest;
     this._storage = storage;
     this._debugMode = debugMode;
@@ -116,14 +116,14 @@ class WalletController {
   }
 
   /**
-   * Loads all available wallets. Assumes that cloudchain confs are already
+   * Loads all available wallets. Assumes that xlite-daemon confs are already
    * loaded.
    * @throws {Error} on fatal error
    */
   loadWallets() {
     const disabledWallets = new Set(['BCH', 'TBLOCK', 'TZC', 'null']); // TODO Enable wallets when supported
-    // Create the wallet instances for all valid cloudchains wallets
-    for (const conf of this._cloudChains.getWalletConfs()) {
+    // Create the wallet instances for all valid xlite-daemon wallets
+    for (const conf of this._xliteDaemon.getWalletConfs()) {
       if (disabledWallets.has(conf.ticker()))
         continue;
       const token = this._manifest.getToken(conf.ticker());

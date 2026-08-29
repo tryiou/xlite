@@ -43,28 +43,28 @@ export const apiConstants = {
   contextMenu_showPasteMenu: 'contextMenu_showPasteMenu',
   contextMenu_showStandardMenu: 'contextMenu_showStandardMenu',
 
-  cloudChains_isInstalled: 'cloudChains_isInstalled',
-  cloudChains_hasSettings: 'cloudChains_hasSettings',
-  cloudChains_getWalletConf: 'cloudChains_getWalletConf',
-  cloudChains_getWalletConfs: 'cloudChains_getWalletConfs',
-  cloudChains_getMasterConf: 'cloudChains_getMasterConf',
-  cloudChains_isWalletCreated: 'cloudChains_isWalletCreated',
-  cloudChains_saveWalletCredentials: 'cloudChains_saveWalletCredentials',
-  cloudChains_getStoredPassword: 'cloudChains_getStoredPassword',
-  cloudChains_getStoredSalt: 'cloudChains_getStoredSalt',
-  cloudChains_getDecryptedMnemonic: 'cloudChains_getDecryptedMnemonic',
-  cloudChains_loadConfs: 'cloudChains_loadConfs',
-  cloudChains_getCCSPVVersion: 'cloudChains_getCCSPVVersion',
-  cloudChains_isWalletRPCRunning: 'cloudChains_isWalletRPCRunning',
-  cloudChains_spvIsRunning: 'cloudChains_spvIsRunning',
-  cloudChains_startSPV: 'cloudChains_startSPV',
-  cloudChains_stopSPV: 'cloudChains_stopSPV',
-  cloudChains_createSPVWallet: 'cloudChains_createSPVWallet',
-  cloudChains_enableAllWallets: 'cloudChains_enableAllWallets',
-  cloudChains_changePassword: 'cloudChains_changePassword',
-  cloudChains_matchesStoredPassword: 'cloudChains_matchesStoredPassword',
-  cloudChains_isNewInstall: 'cloudChains_isNewInstall',
-  cloudChains_setAllConfigAddressCounts: 'cloudChains_setAllConfigAddressCounts',
+  xliteDaemon_isInstalled: 'xliteDaemon_isInstalled',
+  xliteDaemon_hasSettings: 'xliteDaemon_hasSettings',
+  xliteDaemon_getWalletConf: 'xliteDaemon_getWalletConf',
+  xliteDaemon_getWalletConfs: 'xliteDaemon_getWalletConfs',
+  xliteDaemon_getMasterConf: 'xliteDaemon_getMasterConf',
+  xliteDaemon_isWalletCreated: 'xliteDaemon_isWalletCreated',
+  xliteDaemon_saveWalletCredentials: 'xliteDaemon_saveWalletCredentials',
+  xliteDaemon_getStoredPassword: 'xliteDaemon_getStoredPassword',
+  xliteDaemon_getStoredSalt: 'xliteDaemon_getStoredSalt',
+  xliteDaemon_getDecryptedMnemonic: 'xliteDaemon_getDecryptedMnemonic',
+  xliteDaemon_loadConfs: 'xliteDaemon_loadConfs',
+  xliteDaemon_getXliteDaemonVersion: 'xliteDaemon_getXliteDaemonVersion',
+  xliteDaemon_isWalletRPCRunning: 'xliteDaemon_isWalletRPCRunning',
+  xliteDaemon_spvIsRunning: 'xliteDaemon_spvIsRunning',
+  xliteDaemon_startSPV: 'xliteDaemon_startSPV',
+  xliteDaemon_stopSPV: 'xliteDaemon_stopSPV',
+  xliteDaemon_createSPVWallet: 'xliteDaemon_createSPVWallet',
+  xliteDaemon_enableAllWallets: 'xliteDaemon_enableAllWallets',
+  xliteDaemon_changePassword: 'xliteDaemon_changePassword',
+  xliteDaemon_matchesStoredPassword: 'xliteDaemon_matchesStoredPassword',
+  xliteDaemon_isNewInstall: 'xliteDaemon_isNewInstall',
+  xliteDaemon_setAllConfigAddressCounts: 'xliteDaemon_setAllConfigAddressCounts',
 
   confController_getManifest: 'confController_getManifest',
   confController_getManifestHash: 'confController_getManifestHash',
@@ -218,73 +218,73 @@ const contextMenu_API = {
   },
 };
 
-// CloudChains api
-const cloudChains_API = {
-  [apiConstants.cloudChains_isInstalled]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_isInstalled);
+// xlite-daemon api
+const xliteDaemon_API = {
+  [apiConstants.xliteDaemon_isInstalled]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_isInstalled);
   },
-  [apiConstants.cloudChains_hasSettings]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_hasSettings);
+  [apiConstants.xliteDaemon_hasSettings]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_hasSettings);
   },
-  [apiConstants.cloudChains_getWalletConf]: async (token) => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_getWalletConf, token);
+  [apiConstants.xliteDaemon_getWalletConf]: async (token) => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_getWalletConf, token);
   },
-  [apiConstants.cloudChains_getWalletConfs]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_getWalletConfs);
+  [apiConstants.xliteDaemon_getWalletConfs]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_getWalletConfs);
   },
-  [apiConstants.cloudChains_getMasterConf]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_getMasterConf);
+  [apiConstants.xliteDaemon_getMasterConf]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_getMasterConf);
   },
-  [apiConstants.cloudChains_isWalletCreated]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_isWalletCreated);
+  [apiConstants.xliteDaemon_isWalletCreated]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_isWalletCreated);
   },
-  [apiConstants.cloudChains_saveWalletCredentials]: async (hashedPassword, salt, encryptedMnemonic) => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_saveWalletCredentials, hashedPassword, salt, encryptedMnemonic);
+  [apiConstants.xliteDaemon_saveWalletCredentials]: async (hashedPassword, salt, encryptedMnemonic) => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_saveWalletCredentials, hashedPassword, salt, encryptedMnemonic);
   },
-  [apiConstants.cloudChains_getStoredPassword]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_getStoredPassword);
+  [apiConstants.xliteDaemon_getStoredPassword]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_getStoredPassword);
   },
-  [apiConstants.cloudChains_getStoredSalt]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_getStoredSalt);
+  [apiConstants.xliteDaemon_getStoredSalt]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_getStoredSalt);
   },
-  [apiConstants.cloudChains_getDecryptedMnemonic]: async (password) => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_getDecryptedMnemonic, password);
+  [apiConstants.xliteDaemon_getDecryptedMnemonic]: async (password) => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_getDecryptedMnemonic, password);
   },
-  [apiConstants.cloudChains_loadConfs]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_loadConfs);
+  [apiConstants.xliteDaemon_loadConfs]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_loadConfs);
   },
-  [apiConstants.cloudChains_getCCSPVVersion]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_getCCSPVVersion);
+  [apiConstants.xliteDaemon_getXliteDaemonVersion]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_getXliteDaemonVersion);
   },
-  [apiConstants.cloudChains_isWalletRPCRunning]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_isWalletRPCRunning);
+  [apiConstants.xliteDaemon_isWalletRPCRunning]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_isWalletRPCRunning);
   },
-  [apiConstants.cloudChains_spvIsRunning]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_spvIsRunning);
+  [apiConstants.xliteDaemon_spvIsRunning]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_spvIsRunning);
   },
-  [apiConstants.cloudChains_startSPV]: async (password) => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_startSPV, password);
+  [apiConstants.xliteDaemon_startSPV]: async (password) => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_startSPV, password);
   },
-  [apiConstants.cloudChains_stopSPV]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_stopSPV);
+  [apiConstants.xliteDaemon_stopSPV]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_stopSPV);
   },
-  [apiConstants.cloudChains_createSPVWallet]: async (password, mnemonic) => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_createSPVWallet, password, mnemonic);
+  [apiConstants.xliteDaemon_createSPVWallet]: async (password, mnemonic) => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_createSPVWallet, password, mnemonic);
   },
-  [apiConstants.cloudChains_enableAllWallets]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_enableAllWallets);
+  [apiConstants.xliteDaemon_enableAllWallets]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_enableAllWallets);
   },
-  [apiConstants.cloudChains_changePassword]: async (oldPassword, newPassword) => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_changePassword, oldPassword, newPassword);
+  [apiConstants.xliteDaemon_changePassword]: async (oldPassword, newPassword) => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_changePassword, oldPassword, newPassword);
   },
-  [apiConstants.cloudChains_matchesStoredPassword]: async (password) => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_matchesStoredPassword, password);
+  [apiConstants.xliteDaemon_matchesStoredPassword]: async (password) => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_matchesStoredPassword, password);
   },
-  [apiConstants.cloudChains_isNewInstall]: async () => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_isNewInstall);
+  [apiConstants.xliteDaemon_isNewInstall]: async () => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_isNewInstall);
   },
-  [apiConstants.cloudChains_setAllConfigAddressCounts]: async (addressCount) => {
-    return ipcRenderer.invoke(apiConstants.cloudChains_setAllConfigAddressCounts, addressCount);
+  [apiConstants.xliteDaemon_setAllConfigAddressCounts]: async (addressCount) => {
+    return ipcRenderer.invoke(apiConstants.xliteDaemon_setAllConfigAddressCounts, addressCount);
   },
 };
 
@@ -389,7 +389,7 @@ if (contextBridge && !init) {
     ...env_API,
     ...general_API,
     ...contextMenu_API,
-    ...cloudChains_API,
+    ...xliteDaemon_API,
     ...confController_API,
     ...walletController_API,
     ...wallet_API,

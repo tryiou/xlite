@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 import Alert from '../../modules/alert';
-import CloudChains from '../../modules/cloudchains-r';
+import XliteDaemon from '../../modules/xlite-daemon-r.js';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import React, { useState } from 'react';
@@ -13,7 +13,7 @@ import { Button } from './buttons';
 import { LoginInput } from './inputs';
 import { checkPassword } from '../../util';
 
-const SecurityModal = ({ cloudChains, hideSecurityModal }) => {
+const SecurityModal = ({ xliteDaemon, hideSecurityModal }) => {
 
   const [ hiddenOldPassword, setHiddenOldPassword ] = useState(true);
   const [ hidden, setHidden ] = useState(true);
@@ -32,16 +32,16 @@ const SecurityModal = ({ cloudChains, hideSecurityModal }) => {
     setProcessing(true);
 
     try {
-      if (!cloudChains) {
+      if (!xliteDaemon) {
         const title = Localize.text('Issue', 'security modal');
-        const msg = Localize.text('The CloudChains daemon is not ready', 'security modal');
+        const msg = Localize.text('The xlite-daemon is not ready', 'security modal');
         await Alert.error(title, msg);
         return;
       }
       try {
-        if (!await cloudChains.changePassword(oldPassword, password)) {
+        if (!await xliteDaemon.changePassword(oldPassword, password)) {
           const title = Localize.text('Issue', 'security modal');
-          const msg = Localize.text('Failed to change the password, is the CloudChains wallet daemon running?', 'security modal');
+          const msg = Localize.text('Failed to change the password, is the xlite-daemon running?', 'security modal');
           await Alert.error(title, msg);
           return;
         }
@@ -115,13 +115,13 @@ const SecurityModal = ({ cloudChains, hideSecurityModal }) => {
   );
 };
 SecurityModal.propTypes = {
-  cloudChains: PropTypes.instanceOf(CloudChains),
+  xliteDaemon: PropTypes.instanceOf(XliteDaemon),
   hideSecurityModal: PropTypes.func
 };
 
 export default connect(
   ({ appState }) => ({
-    cloudChains: appState.cloudChains,
+    xliteDaemon: appState.xliteDaemon,
   }),
   dispatch => ({
     hideSecurityModal: () => dispatch(appActions.setShowSecurityModal(false))

@@ -10,11 +10,11 @@ require('bootstrap');
 import './util/public-path-r'; // must be first
 import './modules/window-zoom-handlers';
 import * as appActions from './actions/app-actions';
-import { activeViews, MIN_UI_HEIGHT, MIN_UI_WIDTH, platforms, UNKNOWN_CC_VERSION } from './constants';
+import { activeViews, MIN_UI_HEIGHT, MIN_UI_WIDTH, platforms, UNKNOWN_XLITE_DAEMON_VERSION } from './constants';
 import Alert from './modules/alert';
 import App from './components/app';
 import appReducer from './reducers/app-reducer';
-import CloudChains from './modules/cloudchains-r';
+import XliteDaemon from './modules/xlite-daemon-r.js';
 import ConfController from './modules/conf-controller-r';
 import domStorage from './modules/dom-storage';
 import Localize from './components/shared/localize';
@@ -159,8 +159,8 @@ function startupInit(walletController, confController, pricingController, confNe
       await walletController.loadWallets();
     } catch (_err) {
       // Fatal error, warn user and exit program
-      await Alert.error(Localize.text('Issue'), Localize.text('Failed to load CloudChains wallet configs.'));
-      await api.general_requestClose('fatal error, failed to load CloudChains conf files');
+      await Alert.error(Localize.text('Issue'), Localize.text('Failed to load xlite-daemon wallet configs.'));
+      await api.general_requestClose('fatal error, failed to load xlite-daemon conf files');
       return;
     }
 
@@ -221,21 +221,21 @@ function startupInit(walletController, confController, pricingController, confNe
 
   store.dispatch(appActions.setAppVersion((await api.general_getAppVersion())));
 
-  const ccVersion = await api.cloudChains_getCCSPVVersion();
+  const xliteDaemonVersion = await api.xliteDaemon_getXliteDaemonVersion();
 
-  if(!ccVersion) {
+  if(!xliteDaemonVersion) {
     return api.general_ccStartupError(true);
-  } else if(ccVersion === UNKNOWN_CC_VERSION) {
+  } else if(xliteDaemonVersion === UNKNOWN_XLITE_DAEMON_VERSION) {
     return api.general_ccStartupError(false);
   }
 
-  store.dispatch(appActions.setCCVersion(ccVersion));
+  store.dispatch(appActions.setCCVersion(xliteDaemonVersion));
 
-  const cloudChains = new CloudChains(api, db, domStorage);
-  if (await cloudChains.isNewInstall()) { // If new install clear the storage
+  const xliteDaemon = new XliteDaemon(api, db, domStorage);
+  if (await xliteDaemon.isNewInstall()) { // If new install clear the storage
     domStorage.clear();
     await db.clear();
-    if(api.general_getPlatform() === platforms.win && ccVersion === UNKNOWN_CC_VERSION)
+    if(api.general_getPlatform() === platforms.win && xliteDaemonVersion === UNKNOWN_XLITE_DAEMON_VERSION)
       store.dispatch(setShowWindowsLibraryDownloadModal(true));
   }
 
@@ -256,7 +256,7 @@ function startupInit(walletController, confController, pricingController, confNe
   // i.e. the loading screen is displayed until these calls complete
   // below.
   store.dispatch(appActions.setManifest(tokenManifest));
-  store.dispatch(appActions.setCloudChains(cloudChains));
+  store.dispatch(appActions.setXliteDaemon(xliteDaemon));
   store.dispatch(appActions.setWalletController(walletController));
   store.dispatch(appActions.setPricingController(pricingController));
   store.dispatch(appActions.setStartupInitializer(startupInit(walletController, confController, pricingController, confManifest.length === 0)));

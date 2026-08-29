@@ -554,7 +554,7 @@ class WalletController {
   }
 
   /**
-   * Start polling for cloudchains wallet updates.
+   * Start polling for xlite-daemon wallet updates.
    * @param interval {number}
    * @param handler {function}
    */
@@ -568,7 +568,7 @@ class WalletController {
   }
 
   /**
-   * Start polling for cloudchains wallet updates.
+   * Start polling for xlite-daemon wallet updates.
    * @param interval {number}
    * @param handler {function}
    */

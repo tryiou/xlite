@@ -10,10 +10,10 @@ import * as appActions from '../../actions/app-actions';
 import { Button } from './buttons';
 import { LoginInput } from './inputs';
 import Alert from '../../modules/alert';
-import CloudChains from '../../modules/cloudchains-r';
+import XliteDaemon from '../../modules/xlite-daemon-r.js';
 import { checkPassword } from '../../util';
 
-const BackupModal = ({ hideBackupModal, cloudChains }) => {
+const BackupModal = ({ hideBackupModal, xliteDaemon }) => {
 
   const [ hiddenPassword, setHiddenPassword ] = useState(true);
   const [ password, setPassword ] = useState('');
@@ -38,14 +38,14 @@ const BackupModal = ({ hideBackupModal, cloudChains }) => {
         await Alert.error(title, msg);
         return;
       }
-      if (!cloudChains) {
+      if (!xliteDaemon) {
         const title = Localize.text('Issue', 'backup modal');
-        const msg = Localize.text('The CloudChains daemon is not ready', 'backup modal');
+        const msg = Localize.text('The xlite-daemon is not ready', 'backup modal');
         await Alert.error(title, msg);
         return;
       }
       try {
-        if (!await cloudChains.matchesStoredPassword(password)) {
+        if (!await xliteDaemon.matchesStoredPassword(password)) {
           const title = Localize.text('Issue', 'backup modal');
           const msg = Localize.text('Incorrect Password', 'backup modal');
           await Alert.error(title, msg);
@@ -56,7 +56,7 @@ const BackupModal = ({ hideBackupModal, cloudChains }) => {
         return;
       }
 
-      const storedMnemonic = await cloudChains.getDecryptedMnemonic(password);
+      const storedMnemonic = await xliteDaemon.getDecryptedMnemonic(password);
       const blob = new Blob([storedMnemonic], { type: 'text/plain;charset=utf-8' });
       const link = document.createElement('a');
       link.href = window.URL.createObjectURL(blob);
@@ -106,12 +106,12 @@ const BackupModal = ({ hideBackupModal, cloudChains }) => {
 };
 BackupModal.propTypes = {
   hideBackupModal: PropTypes.func,
-  cloudChains: PropTypes.instanceOf(CloudChains)
+  xliteDaemon: PropTypes.instanceOf(XliteDaemon)
 };
 
 export default connect(
   ({ appState }) => ({
-    cloudChains: appState.cloudChains,
+    xliteDaemon: appState.xliteDaemon,
   }),
   dispatch => ({
     hideBackupModal: () => dispatch(appActions.setShowBackupModal(false))

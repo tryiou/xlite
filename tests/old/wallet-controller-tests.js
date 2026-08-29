@@ -6,7 +6,7 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 
-import CloudChains from '../../src/server/modules/cloudchains';
+import XliteDaemon from '../../src/server/modules/xlite-daemon.js';
 import ConfController from '../../src/server/modules/conf-controller';
 import FakeRPCController from './fake-rpc-controller';
 import RPCTransaction from '../../src/app/types/rpc-transaction';
@@ -31,12 +31,12 @@ describe('WalletController Test Suite', function() {
   });
 
   const storage = new SimpleStorage(); // memory only
-  const dir = path.join(tmp, 'CloudChains');
+  const dir = path.join(tmp, 'xlite-daemon');
   const settingsDir = path.join(dir, 'settings');
   const ccFunc = () => { return dir; };
   let confController;
   let tokenManifest;
-  let cloudChains;
+  let xliteDaemon;
   const otxBLOCK = {
     txId: '50913b9adc6b95ac454d1f29f6d09e596cd638f3673bb889a506a6250a358bab',
     address: 'yBMQcUYNZ2g177GTb77ZT6wWoknfqobBMJ',
@@ -134,31 +134,31 @@ describe('WalletController Test Suite', function() {
     confController = new ConfController(storage, availableWallets);
     await confController.updateLatest('manifest-url', 'xbridge-confs/', '0123456789', 'manifest-latest.json', req).should.be.finally.true();
     tokenManifest = new TokenManifest(confController.getManifest(), confController.getXBridgeInfo());
-    cloudChains = new CloudChains(ccFunc, storage);
-    cloudChains.loadConfs();
+    xliteDaemon = new XliteDaemon(ccFunc, storage);
+    xliteDaemon.loadConfs();
   });
 
   it('WalletController()', function() {
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
-    wc._cloudChains.should.be.eql(cloudChains);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
+    wc._xliteDaemon.should.be.eql(xliteDaemon);
     wc._manifest.should.be.eql(tokenManifest);
     wc._storage.should.be.eql(storage);
   });
   it('WalletController.getWallets()', function() {
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
     wc.loadWallets();
     wc.getWallets().should.be.an.Array();
     wc.getWallets().length.should.be.equal(2);
     wc.getWallets()[0].should.be.instanceof(Wallet);
   });
   it('WalletController.getWallet()', function() {
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
     wc.loadWallets();
     should.not.exist(wc.getWallet('missing'));
     wc.getWallet('BLOCK').should.be.instanceof(Wallet);
   });
   it('WalletController.getEnabledWallets()', function() {
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
     wc.loadWallets();
     wc.getEnabledWallets().should.be.an.Array();
     wc.getEnabledWallets().length.should.be.equal(1);
@@ -167,7 +167,7 @@ describe('WalletController Test Suite', function() {
   it('WalletController.getBalances()', function() {
     const balances = new Map([['BLOCK', ['100', '10']], ['BTC', ['100', '100']]]);
     storage.setItem(storageKeys.BALANCES, balances);
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
     wc.loadWallets();
     wc.getBalances().should.be.an.instanceof(Map);
     wc.getBalances().size.should.be.equal(2);
@@ -175,7 +175,7 @@ describe('WalletController Test Suite', function() {
     wc.getBalances().get('BTC').should.be.eql(balances.get('BTC'));
   });
   it('WalletController.loadWallets()', function() {
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
     wc.getWallets().should.be.an.Array();
     wc.getWallets().should.be.empty();
     wc.loadWallets();
@@ -192,7 +192,7 @@ describe('WalletController Test Suite', function() {
     const BLOCK = (await currencyReq('BLOCK', [])).body;
     const BTC = (await currencyReq('BTC', [])).body;
     const multipliers = {BLOCK, BTC};
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
     wc.loadWallets();
     await wc.updatePriceMultipliers(currencyReq);
     storage.getItem(storageKeys.ALT_CURRENCY_MULTIPLIERS).should.be.eql(multipliers);
@@ -200,7 +200,7 @@ describe('WalletController Test Suite', function() {
   it('WalletController.updatePriceMultipliers() bad request', async function() {
     const multipliers = {};
     const currencyReq = async (ticker, currencies) => { return { err: multipliers }; };
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
     wc.loadWallets();
     await wc.updatePriceMultipliers(currencyReq);
     const expected = {};
@@ -214,7 +214,7 @@ describe('WalletController Test Suite', function() {
   const updateBalancePrep = async () => {
     balances = new Map();
     fakerpc = new FakeRPCController();
-    const wc = new WalletController(cloudChains, tokenManifest, storage);
+    const wc = new WalletController(xliteDaemon, tokenManifest, storage);
     wc.loadWallets();
     const fakeunspent = await fakerpc.listUnspent();
     let total = bignumber(0);
