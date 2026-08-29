@@ -12,9 +12,22 @@ Layout: `src/server/` is the Electron main process (daemon lifecycle
 `xlite-daemon.js`, stdout protocol `daemon-protocol.js`, RPC `rpc-controller.js`);
 `src/app/` is the renderer (React components/redux); `src/scss/` styles.
 
+## Prerequisites — Node
+
+- Requires **Node >=22 (lts/jod)** and npm >=10 — enforced by `package.json` `engines` + `engine-strict=true` (`.npmrc`). Committed `.nvmrc` contains `lts/jod`.
+- **Workspace agents (and local dev in this workspace):** always use NVM before any `npm`/`npx`:
+  ```
+  export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"; nvm use lts/jod
+  # `nvm use` also works (reads .nvmrc)
+  node -v && npm -v   # → v22.x + 10.x
+  ```
+- **Public contributors:** any Node >=22 works; `nvm use lts/jod` is recommended.
+- **CI:** `actions/setup-node@v4` with `node-version: lts/jod` (`.github/workflows/build.yml`).
+
 ## Commands
 
 ```bash
+export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"; nvm use lts/jod
 npm install        # first setup
 
 npm run build      # babel+webpack+sass -> dist/ (required before start)
@@ -25,13 +38,8 @@ npm run watch      # incremental rebuilds during development
 npx vitest run     # modern unit suite (tests/unit/)  [also test:vitest*]
 ```
 
-- Tests are two coexisting stacks. Modern: vitest on `tests/unit/`. Legacy:
-  electron-mocha over `tests/old/*-tests.js|*-rtests.js`
-  (`npm run test-main` / `test-renderer`; headless variants
-  `test-headless-main` / `test-headless-renderer` wrap `xvfb-maybe`).
-- No lint script exists; eslint config is `eslint.config.mjs`. CI does NOT run
-  tests — it builds/publishes native packages only.
-- CI uses Node lts/Iron (`.github/workflows/build.yml`).
+- Tests: vitest on `tests/unit/` (modern) and electron-mocha on `tests/old/*` (legacy, `xvfb-maybe` for headless).
+- CI builds/publishes native packages only — no test step.
 
 ## Daemon integration (fragile coupling — change both sides together)
 

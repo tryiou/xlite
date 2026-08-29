@@ -1,6 +1,10 @@
 {
   "name": "xlite",
   "version": "1.0.8",
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
   "description": "xlite",
   "private": true,
   "main": "./dist/server/index.js",
