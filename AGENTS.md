@@ -65,7 +65,8 @@ npx vitest run     # modern unit suite (tests/unit/)  [also test:vitest*]
 
 - Never commit build artifacts or local state: `dist/`, `dist-native/`,
   `temp/`, `coverage/`, `node_modules/`, `.env` (gitignored; holds live API keys).
-- A vendored `blockchain-configuration-files/xbridge-confs/` copy lives inside
-  this repo — it is not the workspace's canonical config repo.
+- Coin configs are NOT vendored in this repo — an earlier
+  `blockchain-configuration-files/` copy was removed; the GUI consumes coin
+  data from the daemon (`getCoins`). Do not reintroduce a vendored copy.
 - Commit messages: conventional commits `type(scope): description`
   (`feat`, `fix`, `refactor`, `chore`, ...). Branch here is `dev_new`.
