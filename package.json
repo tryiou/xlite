@@ -131,6 +131,7 @@
     "winston": "^3.17.0"
   },
   "build": {
+    "afterPack": "./scripts/appimage-apparmor-afterpack.js",
     "npmRebuild": false,
     "asarUnpack": [
       "**/bin/linux/xlite-daemon-linux64",
