@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
 import Token from '../types/token';
+import XBridgeInfo from '../types/xbridgeinfo';
 
 class TokenManifest {
   /**
@@ -30,7 +31,11 @@ class TokenManifest {
       infos.set(info.ticker, info);
     for (const t of this._manifest) {
       const token = new Token(t);
-      token.xbinfo = infos.get(token.ticker);
+      // A manifest token without fee info (legacy split lists, delisted or
+      // backend-dropped coins) must never poison the whole wallet list
+      // (live 2026-09-24: undefined xbinfo crashed getWallets sanitation).
+      // Default to empty fee params; the coin simply renders unavailable.
+      token.xbinfo = infos.get(token.ticker) ?? new XBridgeInfo({ticker: token.ticker});
       if (token.ticker === 'BLOCK')
         token.xbinfo.rpcport = 41419; // default BLOCK port to ensure no clash with DX
       this._tokens.set(token.ticker, token);

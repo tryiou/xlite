@@ -44,7 +44,10 @@ export const sanitize = (o, blacklist=[], whitelist=[]) => {
  * @param whitelist {Set}
  */
 export const sanitizeObj = (o, blacklist, whitelist) => {
-  if (_.isNull(o) || _.isString(o) || _.isNumber(o) || _.isFunction(o) || _.isBoolean(o))
+  // Undefined values carry no data to sanitize and crash iteration
+  // (live 2026-09-24: orphan token xbinfo killed the whole wallet list).
+  // Skip them instead of failing the entire payload.
+  if (typeof o === 'undefined' || _.isNull(o) || _.isString(o) || _.isNumber(o) || _.isFunction(o) || _.isBoolean(o))
     return;
 
   if (_.isArray(o) || typeof o[Symbol.iterator] === 'function' || o instanceof Set) {

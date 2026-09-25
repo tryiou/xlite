@@ -68,6 +68,15 @@ class WalletController {
   }
 
   /**
+   * Swaps the token manifest (post-unlock coin refresh: the startup
+   * manifest may predate daemon getCoins). Wallets reload from it on the
+   * next loadWallets call.
+   */
+  setTokenManifest(manifest) {
+    this._manifest = manifest;
+  }
+
+  /**
    * Return a copy of all wallets.
    * @returns {Array<Wallet>}
    */

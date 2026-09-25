@@ -8,6 +8,7 @@ import {publicPath} from '../util/public-path';
 import Recipient from '../../app/types/recipient';
 import {sanitize, Blacklist, Whitelist} from '../../app/modules/api-r';
 import WalletController from './wallet-controller';
+import TokenManifest from '../../app/modules/token-manifest';
 
 import _ from 'lodash';
 import electron from 'electron';
@@ -484,6 +485,22 @@ class Api {
     this._proc.handle(apiConstants.confController_getCoinConfigs, (evt, arg) => {
       // DTO is public coin params (no secrets) — no Blacklist stripping (port is needed)
       return this._confController.getCoinConfigs();
+    });
+    this._proc.handle(apiConstants.confController_refreshCoins, async () => {
+      // Post-unlock refresh: master is up (startSPV resolved on RPC-ready),
+      // so fetch fresh DTOs, prune legacy split lists, and swap the manifest
+      // the wallet controller loads from. Never throws: on failure the
+      // startup manifest (now crash-proof) stays in place.
+      try {
+        if (!await this._confController.init(60000))
+          return false;
+        this._walletController.setTokenManifest(
+          new TokenManifest(this._confController.getManifest(), this._confController.getXBridgeInfo()));
+        return true;
+      } catch (err) {
+        logger.error(`confController_refreshCoins failed: ${err?.message ?? String(err)}`);
+        return false;
+      }
     });
   }
 

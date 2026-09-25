@@ -227,7 +227,18 @@ class XliteDaemon {
    */
   async startSPV(password = '') {
     try {
-      return await this._api.xliteDaemon_startSPV(password);
+      const started = await this._api.xliteDaemon_startSPV(password);
+      if (started) {
+        // Master is up (startSPV resolves on RPC-ready): upgrade coin configs
+        // from the daemon now, before wallets load. Never fails login: on
+        // failure the startup manifest (crash-proof) stays in place.
+        try {
+          await this._api.confController_refreshCoins();
+        } catch (_err) {
+          // noop — refresh is best-effort
+        }
+      }
+      return started;
     } catch (_err) {
       return false;
     }

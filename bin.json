@@ -1,7 +1,7 @@
 {
   "linux": {
     "url": "https://github.com/tryiou/xlite-daemon/releases/download/v0.5.15/xlite-daemon-linux64",
-    "hash": "12e32e01f928c661549ad796ce9e0498f299b074aa7d047008ea663ec6ce4036"
+    "hash": "6e305b33118c105ea5f7043e96ff1b6e07b4f3ac7d0c7d15c3e32408a2ecb90b"
   },
   "mac": {
     "url": "https://github.com/tryiou/xlite-daemon/releases/download/v0.5.15/xlite-daemon-osx64",

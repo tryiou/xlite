@@ -27,11 +27,24 @@ class ConfController {
    * Migrates legacy MANIFEST/XBRIDGE_INFO → COIN_CONFIGS once.
    * @return {Promise<boolean>} true if configs available (fresh or cached), false if daemon missing getCoins and no cache.
    */
-  async init() {
-    // Retry getCoins at startup — master may not yet be listening (daemon spawn race)
-    const maxAttempts = 3;
+  // Default cap is short: startup must never block on the daemon (the
+  // daemon spawns post-unlock, so master is routinely absent at boot and
+  // the legacy/cached fallback — now crash-proof — covers the window).
+  // Post-unlock refresh passes an explicit large cap when master is known
+  // up (startSPV resolved on RPC-ready). Live 2026-09-24: a 120 s default
+  // deadlocked window creation behind daemon spawn (which needs unlock in
+  // that window).
+  async init(masterTimeoutMs = 6000) {
+    // Wait for the daemon master to listen (daemon spawn race: boot takes
+    // seconds plus wallet unlock; the old 3×0.5 s window lost it
+    // deterministically — live 2026-09-24, five consecutive ECONNREFUSED
+    // fallbacks to split legacy lists). Poll until the deadline, then fall
+    // back exactly as before.
+    const deadline = Date.now() + masterTimeoutMs;
     let lastErr = null;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let attempt = 0;
+    for (;;) {
+      attempt++;
       try {
         const cfg = new ConfigHelper('master');
         const port = cfg.getMasterRpcPort();
@@ -54,11 +67,19 @@ class ConfController {
             throw new Error(`malformed dustAmount for ${d.ticker}`);
         }
         this._storage.setItem(storageKeys.COIN_CONFIGS, dtos);
+        // Fresh DTOs are self-consistent (manifest+xbinfo derive from one
+        // array): prune legacy split lists so a stale 12-vs-8 mismatch can
+        // never serve again. Cached COIN_CONFIGS remains the offline source.
+        this._storage.removeItem(storageKeys.MANIFEST);
+        this._storage.removeItem(storageKeys.XBRIDGE_INFO);
         return true;
       } catch (e) {
         lastErr = e;
-        if (attempt < maxAttempts)
-          await new Promise(r => setTimeout(r, 500 * attempt));
+        if (Date.now() >= deadline)
+          break;
+        if (attempt % 5 === 1)
+          logger.warn(`ConfController waiting for daemon master getCoins (attempt ${attempt}): ${e?.message ?? String(e)}`);
+        await new Promise(r => setTimeout(r, 2000));
       }
     }
     logger.error(`ConfController init failed (getCoins): ${lastErr?.message ?? String(lastErr)}`);
