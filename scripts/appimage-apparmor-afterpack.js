@@ -8,9 +8,10 @@
 // - Writes a loader at XLite that:
 //   1) probes `unshare -Ur true` (true ns test, as in PR #9590)
 //   2) if OK -> exec .bin (sandbox kept)
-//   3) if blocked -> tries once to install the XLite AppImage + unpacked profiles {userns,} via pkexec/apparmor_parser
-//   4) re-probes; if now OK and we are inside AppImage ($APPIMAGE set) re-exec outer AppImage so profile attaches, else exec .bin
-//   5) still blocked -> fallback --no-sandbox with warning (functional but degraded)
+//   3) if blocked -> installs + loads the XLite AppImage + unpacked profiles {userns,} via pkexec/apparmor_parser
+//   4) if the parser confirms both loads -> exec now (re-exec outer AppImage when inside one, else .bin);
+//      attachment happens at that exec, so no re-probe (this shell predates the load and could never observe it)
+//   5) if loads fail -> fallback --no-sandbox with warning (functional but degraded)
 //
 // This preserves sandbox for AppImage after one password prompt. The hook
 // runs for every linux target (AppImage/deb/tar.gz); where userns already
@@ -123,6 +124,14 @@ if command -v aa-status >/dev/null 2>&1; then
     NEEDS_UNPACKED=0
   fi
 fi
+# INSTALL_OK defaults to trusting the on-disk state: NEEDS_* are 0 only when
+# the files exist AND aa-status confirms them loaded, in which case $BIN
+# attaches at its exec below. The install flow below resets it to 0 first
+# and sets it back to 1 only on parser-confirmed loads.
+# (Edge: userns blocked by sysctl rather than AppArmor with a compliant
+# parser still yields rc=0 and a clean exec; Chromium then fails that launch
+# visibly instead of degrading silently. Rare, and loud beats silent.)
+INSTALL_OK=1
 if [ "$NEEDS_APPIMAGE" = "1" ] || [ "$NEEDS_UNPACKED" = "1" ]; then
   # Friendly pre-notify before pkexec (proper message) — explains one-time sandbox setup
   if command -v zenity >/dev/null 2>&1; then
@@ -130,7 +139,15 @@ if [ "$NEEDS_APPIMAGE" = "1" ] || [ "$NEEDS_UNPACKED" = "1" ]; then
   elif command -v kdialog >/dev/null 2>&1; then
     kdialog --msgbox "XLite needs to install AppArmor profiles to keep the Chromium sandbox enabled on this system. You will be asked for your password once." 2>/dev/null || true
   fi
+  # Install + load, trusting the parser result — never re-probe here.
+  # Attachment happens at exec, so this already-running shell can never gain
+  # the confinement $BIN will inherit at its own exec below; a re-probe would
+  # test the wrong process context and always fail. Parser rc=0 is the
+  # kernel's own acknowledgment and the only guarantee $BIN needs (its
+  # attachment path is unit-locked to the profile).
+  INSTALL_OK=0
   if command -v pkexec >/dev/null 2>&1; then
+    PK_RC=0
     pkexec sh -c '
       mkdir -p /etc/apparmor.d
       # Resolve the parser INSIDE the privileged shell: absolute paths first
@@ -140,6 +157,7 @@ if [ "$NEEDS_APPIMAGE" = "1" ] || [ "$NEEDS_UNPACKED" = "1" ]; then
         if [ -x "$_p" ]; then PARSER_BIN="$_p"; break; fi
       done
       if [ -z "$PARSER_BIN" ]; then PARSER_BIN="$(command -v apparmor_parser || true)"; fi
+      FAIL=0
       if [ "'$NEEDS_APPIMAGE'" = "1" ]; then
         cat > /etc/apparmor.d/xlite-appimage <<'\\''APPARMOR_EOF'\\''
 ${profileAppimageBody}
@@ -151,17 +169,31 @@ ${profileUnpackedBody}
 APPARMOR_EOF
       fi
       if [ -n "$PARSER_BIN" ]; then
-        "$PARSER_BIN" -r /etc/apparmor.d/xlite-appimage
-        echo "XLite: apparmor_parser xlite-appimage rc=$?" >&2
-        "$PARSER_BIN" -r /etc/apparmor.d/xlite-unpacked
-        echo "XLite: apparmor_parser xlite-unpacked rc=$?" >&2
+        if "$PARSER_BIN" -r /etc/apparmor.d/xlite-appimage; then
+          echo "XLite: loaded xlite-appimage profile." >&2
+        else
+          echo "XLite: apparmor_parser xlite-appimage failed (rc=$?)." >&2
+          FAIL=1
+        fi
+        if "$PARSER_BIN" -r /etc/apparmor.d/xlite-unpacked; then
+          echo "XLite: loaded xlite-unpacked profile." >&2
+        else
+          echo "XLite: apparmor_parser xlite-unpacked failed (rc=$?)." >&2
+          FAIL=1
+        fi
       else
         echo "XLite: apparmor_parser not found; profiles written but not loaded." >&2
         echo "XLite: load them manually: sudo apparmor_parser -r /etc/apparmor.d/xlite-appimage" >&2
+        FAIL=1
       fi
-    ' || echo "XLite: privileged install step failed; continuing without sandbox profiles." >&2
+      exit $FAIL
+    ' || PK_RC=$?
+    if [ "$PK_RC" = "0" ]; then
+      INSTALL_OK=1
+    fi
   elif command -v sudo >/dev/null 2>&1 && [ -t 0 ]; then
     echo "XLite: Installing AppArmor profiles for sandbox (requires sudo, one-time)..." >&2
+    SU_RC=0
     sudo sh -c '
       mkdir -p /etc/apparmor.d
       # Same inside-privilege parser resolution as the pkexec branch above.
@@ -170,6 +202,7 @@ APPARMOR_EOF
         if [ -x "$_p" ]; then PARSER_BIN="$_p"; break; fi
       done
       if [ -z "$PARSER_BIN" ]; then PARSER_BIN="$(command -v apparmor_parser || true)"; fi
+      FAIL=0
       if [ "'$NEEDS_APPIMAGE'" = "1" ]; then
         cat > /etc/apparmor.d/xlite-appimage <<'\\''APPARMOR_EOF'\\''
 ${profileAppimageBody}
@@ -181,21 +214,38 @@ ${profileUnpackedBody}
 APPARMOR_EOF
       fi
       if [ -n "$PARSER_BIN" ]; then
-        "$PARSER_BIN" -r /etc/apparmor.d/xlite-appimage
-        echo "XLite: apparmor_parser xlite-appimage rc=$?" >&2
-        "$PARSER_BIN" -r /etc/apparmor.d/xlite-unpacked
-        echo "XLite: apparmor_parser xlite-unpacked rc=$?" >&2
+        if "$PARSER_BIN" -r /etc/apparmor.d/xlite-appimage; then
+          echo "XLite: loaded xlite-appimage profile." >&2
+        else
+          echo "XLite: apparmor_parser xlite-appimage failed (rc=$?)." >&2
+          FAIL=1
+        fi
+        if "$PARSER_BIN" -r /etc/apparmor.d/xlite-unpacked; then
+          echo "XLite: loaded xlite-unpacked profile." >&2
+        else
+          echo "XLite: apparmor_parser xlite-unpacked failed (rc=$?)." >&2
+          FAIL=1
+        fi
       else
         echo "XLite: apparmor_parser not found; profiles written but not loaded." >&2
         echo "XLite: load them manually: sudo apparmor_parser -r /etc/apparmor.d/xlite-appimage" >&2
+        FAIL=1
       fi
-    ' || true
+      exit $FAIL
+    ' || SU_RC=$?
+    if [ "$SU_RC" = "0" ]; then
+      INSTALL_OK=1
+    fi
+  else
+    echo "XLite: no privilege helper (pkexec/sudo) available; continuing without sandbox profiles." >&2
   fi
 fi
 
-# Re-probe after attempted install
-if can_unshare; then
-  # Inside AppImage, need to re-exec outer AppImage so the AppImage profile attaches to outer path
+# Parser-confirmed loaded above: attachment happens at the next exec, so exec
+# now — never re-probe here (this shell predates the load and can never gain
+# the confinement $BIN is about to inherit). Re-exec the outer AppImage when
+# inside one (fresh attach for the whole tree), else exec $BIN directly.
+if [ "$INSTALL_OK" = "1" ]; then
   if [ -n "\${APPIMAGE:-}" ] && [ -f "\${APPIMAGE:-}" ]; then
     # Avoid infinite loop: only re-exec if we haven't already
     if [ "\${XLITE_SANDBOX_REEXEC:-0}" != "1" ]; then
