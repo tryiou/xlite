@@ -8,9 +8,16 @@
 // - Writes a loader at XLite that:
 //   1) probes `unshare -Ur true` (true ns test, as in PR #9590)
 //   2) if OK -> exec .bin (sandbox kept)
-//   3) if blocked -> installs + loads the XLite AppImage + unpacked profiles {userns,} via pkexec/apparmor_parser
-//   4) if the parser confirms both loads -> exec now (re-exec outer AppImage when inside one, else .bin);
-//      attachment happens at that exec, so no re-probe (this shell predates the load and could never observe it)
+//   3) if blocked -> checks the root-owned profile files for our expected
+//      content (no aa-status: it refuses unprivileged users, so it must
+//      never gate here) and, only if the profile for THIS launch mode
+//      (AppImage outer file vs unpacked .bin) is missing/stale, installs +
+//      loads the XLite AppImage + unpacked profiles {userns,} via
+//      pkexec/apparmor_parser — one password prompt, truly once
+//   4) if the parser confirms loads (or nothing was needed) -> exec now
+//      (re-exec outer AppImage when inside one, else .bin); attachment
+//      happens at that exec, so no re-probe (this shell predates the load
+//      and could never observe it)
 //   5) if loads fail -> fallback --no-sandbox with warning (functional but degraded)
 //
 // This preserves sandbox for AppImage after one password prompt. The hook
@@ -54,7 +61,7 @@ profile xlite-unpacked /**/${executableName}.bin flags=(unconfined) {
     return;
   }
 
-  // Avoid double-patching on re-runs — if already patched, verify loader is up-to-date by checking for xlite-unpacked marker.
+  // Avoid double-patching on re-runs — if already patched, verify loader is up-to-date by checking for the privilege-free detection markers.
   // Size-bounded: a multi-hundred-MB ELF here means "not yet patched", never read it fully.
   try {
     await fs.access(binPath);
@@ -63,11 +70,11 @@ profile xlite-unpacked /**/${executableName}.bin flags=(unconfined) {
       const st = await fs.stat(executable);
       if (st.size < 65536) content = await fs.readFile(executable, 'utf8');
     } catch (_) { /* unreadable: recreate below */ }
-    if (content.includes('xlite-unpacked') && content.includes('filter_args')) {
+    if (content.includes('profile_ok') && content.includes('NEEDS_CURRENT') && content.includes('filter_args')) {
       // already patched with latest version
       return;
     }
-    // outdated loader (before unpacked fix) — recreate
+    // outdated loader (aa-status gate or pre-marker version) — recreate
     try { await fs.unlink(executable); } catch (_) { /* already gone */ }
     await fs.rename(binPath, executable);
   } catch (_) { /* nothing staged to restore */ }
@@ -105,34 +112,47 @@ if can_unshare; then
   exec "$BIN" \${FILTERED[@]+"\${FILTERED[@]}"}
 fi
 
-# Blocked — one sudo call max: install both AppArmor profiles (AppImage + unpacked) if needed
+# Blocked — at most one password prompt, and only when actually needed.
+# Detection works WITHOUT privilege: aa-status refuses unprivileged users
+# ("You do not have enough privilege to read the profile set"), so a failing
+# aa-status grep would re-trigger the prompt on EVERY launch even with the
+# profiles installed and loaded. It must never gate here. Instead trust the
+# root-owned on-disk state: our uniquely-named profiles with the expected
+# attachment + userns rule. Kernel load is confirmed by the parser (rc=0) at
+# install time and preserved across reboots by apparmor.service, which
+# autoloads /etc/apparmor.d.
 PROFILE_APPIMAGE="/etc/apparmor.d/xlite-appimage"
 PROFILE_UNPACKED="/etc/apparmor.d/xlite-unpacked"
+# Markers baked at build time from the profile bodies below: if the bodies
+# ever change, stale files stop matching and a one-time reinstall triggers.
+MARK_APPIMAGE="profile xlite-appimage /**/${productName}*.AppImage"
+MARK_UNPACKED="profile xlite-unpacked /**/${executableName}.bin"
+profile_ok() {
+  # $1 = file, $2 = expected header marker
+  [ -f "$1" ] && grep -qF "$2" "$1" 2>/dev/null && grep -q "userns," "$1" 2>/dev/null
+}
 NEEDS_APPIMAGE=0
 NEEDS_UNPACKED=0
-if [ ! -f "$PROFILE_APPIMAGE" ]; then NEEDS_APPIMAGE=1; fi
-if [ ! -f "$PROFILE_UNPACKED" ]; then NEEDS_UNPACKED=1; fi
-if command -v aa-status >/dev/null 2>&1; then
-  if ! aa-status 2>/dev/null | grep -q "xlite-appimage"; then
-    if [ -f "$PROFILE_APPIMAGE" ]; then NEEDS_APPIMAGE=1; fi
-  else
-    NEEDS_APPIMAGE=0
-  fi
-  if ! aa-status 2>/dev/null | grep -q "xlite-unpacked"; then
-    if [ -f "$PROFILE_UNPACKED" ]; then NEEDS_UNPACKED=1; fi
-  else
-    NEEDS_UNPACKED=0
-  fi
+if ! profile_ok "$PROFILE_APPIMAGE" "$MARK_APPIMAGE"; then NEEDS_APPIMAGE=1; fi
+if ! profile_ok "$PROFILE_UNPACKED" "$MARK_UNPACKED"; then NEEDS_UNPACKED=1; fi
+# Only the profile for THIS launch mode gates the prompt: inside an AppImage
+# the outer file needs confinement, otherwise the unpacked .bin does. The
+# other profile is still (re)installed opportunistically in the same sudo
+# call whenever it is missing, so each mode prompts at most once, ever.
+if [ -n "\${APPIMAGE:-}" ] && [ -f "\${APPIMAGE:-}" ]; then
+  NEEDS_CURRENT="$NEEDS_APPIMAGE"
+else
+  NEEDS_CURRENT="$NEEDS_UNPACKED"
 fi
-# INSTALL_OK defaults to trusting the on-disk state: NEEDS_* are 0 only when
-# the files exist AND aa-status confirms them loaded, in which case $BIN
-# attaches at its exec below. The install flow below resets it to 0 first
-# and sets it back to 1 only on parser-confirmed loads.
+# INSTALL_OK=1 on entry means "nothing to do: the relevant profile is
+# already correct on disk, $BIN attaches at its exec below". The install
+# flow below resets it to 0 first and sets it back to 1 only on
+# parser-confirmed loads.
 # (Edge: userns blocked by sysctl rather than AppArmor with a compliant
 # parser still yields rc=0 and a clean exec; Chromium then fails that launch
 # visibly instead of degrading silently. Rare, and loud beats silent.)
 INSTALL_OK=1
-if [ "$NEEDS_APPIMAGE" = "1" ] || [ "$NEEDS_UNPACKED" = "1" ]; then
+if [ "$NEEDS_CURRENT" = "1" ]; then
   # Friendly pre-notify before pkexec (proper message) — explains one-time sandbox setup
   if command -v zenity >/dev/null 2>&1; then
     zenity --info --title="XLite — One-time setup" --text="XLite needs to install AppArmor profiles to keep the Chromium sandbox enabled on this system (unprivileged user namespaces are restricted).\\n\\nYou will be asked for your password once. This is required only once." --width 420 2>/dev/null || true
