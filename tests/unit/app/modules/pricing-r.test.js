@@ -1,12 +1,11 @@
-/*global describe,it,beforeEach,after*/
+import {afterAll, beforeEach, describe, it} from 'vitest';
 /*eslint quotes: 0, key-spacing: 0*/
 import should from 'should';
 
-import './rtests';
-import domStorage from '../../src/app/modules/dom-storage';
-import FakeApi from './fake-api';
-import PriceData from '../../src/app/types/pricedata';
-import Pricing from '../../src/app/modules/pricing-r';
+import domStorage from '../../../../src/app/modules/dom-storage';
+import FakeApi from '../../helpers/fake-api';
+import PriceData from '../../../../src/app/types/pricedata';
+import Pricing from '../../../../src/app/modules/pricing-r';
 
 describe('Pricing Renderer Test Suite', function() {
   const fakeApi = window.api;
@@ -101,7 +100,7 @@ describe('Pricing Renderer Test Suite', function() {
     priceData2.should.be.eql(await fakeApi.pricing_getPrice(ticker, currency));
   });
 
-  after(function() {
+  afterAll(function() {
     storage.clear();
   });
 });

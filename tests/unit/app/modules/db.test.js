@@ -1,10 +1,9 @@
-/* global after, before, describe, it, should */
+import {afterAll, beforeAll, describe, it} from 'vitest';
 import should from 'should';
 import Dexie from 'dexie';
 import * as uuid from 'uuid';
 
-import './rtests';
-import { DBTable, DBQuery, db, TableConfig, DB } from '../../src/app/modules/db';
+import { DBTable, DBQuery, db, TableConfig, DB } from '../../../../src/app/modules/db';
 
 class TestInitializer {
   constructor(data) {
@@ -197,7 +196,7 @@ describe('DB Test Suite', function() {
 
   describe('DBQuery', function() {
 
-    before(async function() {
+    beforeAll(async function() {
       const table = db.table(tableName0);
       await table.insert({
         name: 'Tom',
@@ -333,7 +332,7 @@ describe('DB Test Suite', function() {
       resWithOffset.every(i => i.should.be.an.instanceOf(TestInitializer));
     });
 
-    after(async function() {
+    afterAll(async function() {
       await db.table(tableName0).clear();
     });
 

@@ -1,4 +1,9 @@
-/* global after, before, beforeEach, describe, it, should */
+import {afterAll, beforeAll, beforeEach, describe, it, vi} from 'vitest';
+
+// electron/app is only used for the data-directory probe; without a mock the
+// node environment resolves "electron" to its binary path string.
+const {electronApp} = vi.hoisted(() => ({electronApp: {getPath: () => require("os").tmpdir()}}));
+vi.mock("electron", () => ({default: {app: electronApp}, app: electronApp}));
 
 import 'should';
 import escapeRegExp from 'lodash/escapeRegExp';
@@ -7,16 +12,16 @@ import moment from 'moment';
 import os from 'os';
 import path from 'path';
 
-import CCWalletConf from '../../src/app/types/ccwalletconf';
-import XliteDaemon from '../../src/server/modules/xlite-daemon.js';
-import ShimCloudChains from '../../src/server/modules/cloudchains.js'; // shim
-import {Crypt, pbkdf2} from '../../src/app/modules/crypt';
-import {DEFAULT_MASTER_PORT, platforms, ccBinDirs, ccBinNames, daemonBinDirs, daemonBinNames} from '../../src/app/constants';
-import fakeExecFile, {FakeSpawn} from './fake-exec-file';
-import FakeRPCController from './fake-rpc-controller';
-import {parseAPIError} from '../../src/app/util';
-import SimpleStorage from '../../src/server/modules/storage';
-import {storageKeys} from '../../src/server/constants';
+import CCWalletConf from '../../../src/app/types/ccwalletconf';
+import XliteDaemon from '../../../src/server/modules/xlite-daemon.js';
+import ShimCloudChains from '../../../src/server/modules/cloudchains.js'; // shim
+import {Crypt, pbkdf2} from '../../../src/app/modules/crypt';
+import {DEFAULT_MASTER_PORT, platforms, ccBinDirs, ccBinNames, daemonBinDirs, daemonBinNames} from '../../../src/app/constants';
+import fakeExecFile, {FakeSpawn} from '../helpers/fake-exec-file';
+import FakeRPCController from '../helpers/fake-rpc-controller';
+import {parseAPIError} from '../../../src/app/util';
+import SimpleStorage from '../../../src/server/modules/storage';
+import {storageKeys} from '../../../src/server/constants';
 
 describe('Util Test Suite', function() {
   it('parseAPIError()', function() {
@@ -53,7 +58,7 @@ describe('CCWalletConf Test Suite', function() {
 
 describe('XliteDaemon Test Suite', function() {
   const tmp = path.join(os.tmpdir(), 'tests_xlitedaemon_test_suite');
-  before(function() {
+  beforeAll(function() {
     if (fs.pathExistsSync(tmp))
       fs.removeSync(tmp);
     fs.mkdirSync(tmp);
@@ -115,7 +120,7 @@ describe('XliteDaemon Test Suite', function() {
 
   describe('XliteDaemon migration probe', function() {
     it('defaultPathFunc prefers xlite-daemon and falls back to legacy dir', function() {
-      const electron = require('electron');
+      const electron = {app: electronApp};
       const originalGetPath = electron.app.getPath;
       const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'probe-'));
       const newPath = path.join(tmpBase, 'xlite-daemon');
@@ -641,7 +646,6 @@ describe('XliteDaemon Test Suite', function() {
       }
     });
     it('XliteDaemon.startSPV()', async function() {
-      this.timeout(2500);
       const cc = new XliteDaemon(ccFunc, storage);
       cc._rpcWaitDelay = 50;
       const rpcHelp = {ccHelp: async () => true};
@@ -853,7 +857,6 @@ describe('XliteDaemon Test Suite', function() {
     };
 
     it('XliteDaemon.createSPVWallet()', async function() {
-      this.timeout(3500);
       if (fs.pathExistsSync(backupDir)) // ensure no existing backups
         fs.removeSync(backupDir);
       fs.mkdirpSync(backupDir);
@@ -891,7 +894,7 @@ describe('XliteDaemon Test Suite', function() {
 
   });
 
-  after(function() {
+  afterAll(function() {
     if (fs.pathExistsSync(tmp))
       fs.removeSync(tmp);
   });

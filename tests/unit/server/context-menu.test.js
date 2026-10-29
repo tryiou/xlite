@@ -1,7 +1,8 @@
-/*global describe,it,beforeEach*/
+import {beforeEach, describe, it} from 'vitest';
+import 'should';
 
-import ContextMenu from '../../src/server/modules/context-menu';
-import FakeElectronMenu from './fake-electron-menu';
+import ContextMenu from '../../../src/server/modules/context-menu';
+import FakeElectronMenu from '../helpers/fake-electron-menu';
 
 describe('ContextMenu Test Suite', function() {
   let contextMenu;

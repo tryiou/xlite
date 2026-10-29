@@ -1,19 +1,18 @@
-/* global describe,it,beforeEach,after */
+import {afterAll, beforeEach, describe, it} from 'vitest';
 /*eslint quotes: 0, key-spacing: 0*/
 import should from 'should';
 
-import './rtests';
-import domStorage from '../../src/app/modules/dom-storage';
-import FakeApi, {resolvePromise} from './fake-api';
-import {localStorageKeys} from '../../src/app/constants';
-import LWDB from '../../src/app/modules/lwdb';
-import Recipient from '../../src/app/types/recipient';
-import RPCTransaction from '../../src/app/types/rpc-transaction';
-import {sanitize, Blacklist, Whitelist} from '../../src/app/modules/api-r';
-import Token from '../../src/app/types/token';
-import {unixTime} from '../../src/app/util';
-import Wallet from '../../src/app/types/wallet-r';
-import XBridgeInfo from '../../src/app/types/xbridgeinfo';
+import domStorage from '../../../../src/app/modules/dom-storage';
+import FakeApi, {resolvePromise} from '../../helpers/fake-api';
+import {localStorageKeys} from '../../../../src/app/constants';
+import LWDB from '../../../../src/app/modules/lwdb';
+import Recipient from '../../../../src/app/types/recipient';
+import RPCTransaction from '../../../../src/app/types/rpc-transaction';
+import {sanitize, Blacklist, Whitelist} from '../../../../src/app/modules/api-r';
+import Token from '../../../../src/app/types/token';
+import {unixTime} from '../../../../src/app/util';
+import Wallet from '../../../../src/app/types/wallet-r';
+import XBridgeInfo from '../../../../src/app/types/xbridgeinfo';
 
 describe('Wallet Test Suite', function() {
   const appStorage = domStorage;
@@ -246,7 +245,7 @@ describe('Wallet Test Suite', function() {
   it('Wallet._fetchTransactions() should not throw on rpc error', async function() {
     fakeApi.wallet_getTransactions = () => { throw new Error(''); };
     const wallet = new Wallet(walletData, fakeApi, appStorage, db);
-    should.doesNotThrow(await wallet._fetchTransactions, Error);
+    await wallet._fetchTransactions(); // rejects -> the test fails, which is the assertion
   });
   it('Wallet.getAddresses()', async function() {
     const wallet = new Wallet(walletData, fakeApi, appStorage, db);
@@ -292,7 +291,7 @@ describe('Wallet Test Suite', function() {
     txid.should.be.equal(await fakeApi.wallet_send(wallet.ticker));
   });
 
-  after(function() {
+  afterAll(function() {
     appStorage.clear();
     db.clear();
   });

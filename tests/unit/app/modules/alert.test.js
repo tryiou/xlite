@@ -1,10 +1,9 @@
-/* global describe, it */
+import {describe, it} from 'vitest';
 import 'should';
 
-import './rtests';
-import Alert from '../../src/app/modules/alert';
-import { swalConfirmed, swalCanceled, setFakePromptInput } from './fake-swal';
-import Localize from '../../src/app/components/shared/localize';
+import Alert from '../../../../src/app/modules/alert';
+import { swalConfirmed, swalCanceled, setFakePromptInput } from '../../helpers/fake-swal';
+import Localize from '../../../../src/app/components/shared/localize';
 
 describe('Alert static methods', function() {
 

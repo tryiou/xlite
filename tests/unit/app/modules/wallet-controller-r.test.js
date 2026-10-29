@@ -1,4 +1,4 @@
-/*global describe,it,before,after,beforeEach*/
+import {afterAll, beforeAll, beforeEach, describe, it} from 'vitest';
 /*eslint quotes: 0, key-spacing: 0*/
 import should from 'should';
 import _ from 'lodash';
@@ -6,27 +6,26 @@ import {combineReducers, createStore} from 'redux';
 import {Map as IMap} from 'immutable';
 import moment from 'moment';
 
-import './rtests';
-import * as appActions from '../../src/app/actions/app-actions';
-import appReducer from '../../src/app/reducers/app-reducer';
-import LWDB from '../../src/app/modules/lwdb';
-import domStorage from '../../src/app/modules/dom-storage';
-import FakeApi, {resolvePromise, txBLOCK, txBTC} from './fake-api';
-import {actions, localStorageKeys} from '../../src/app/constants';
-import {multiplierForCurrency, oneDaySeconds, oneHourSeconds, oneMonthSeconds, oneWeekSeconds, unixTime} from '../../src/app/util';
-import RPCTransaction from '../../src/app/types/rpc-transaction';
-import TokenManifest from '../../src/app/modules/token-manifest';
-import Wallet from '../../src/app/types/wallet-r';
-import WalletController from '../../src/app/modules/wallet-controller-r';
-import XBridgeInfo from '../../src/app/types/xbridgeinfo';
-import {setTransactions} from '../../src/app/actions/app-actions';
+import * as appActions from '../../../../src/app/actions/app-actions';
+import appReducer from '../../../../src/app/reducers/app-reducer';
+import LWDB from '../../../../src/app/modules/lwdb';
+import domStorage from '../../../../src/app/modules/dom-storage';
+import FakeApi, {resolvePromise, txBLOCK, txBTC} from '../../helpers/fake-api';
+import {actions, localStorageKeys} from '../../../../src/app/constants';
+import {multiplierForCurrency, oneDaySeconds, oneHourSeconds, oneMonthSeconds, oneWeekSeconds, unixTime} from '../../../../src/app/util';
+import RPCTransaction from '../../../../src/app/types/rpc-transaction';
+import TokenManifest from '../../../../src/app/modules/token-manifest';
+import Wallet from '../../../../src/app/types/wallet-r';
+import WalletController from '../../../../src/app/modules/wallet-controller-r';
+import XBridgeInfo from '../../../../src/app/types/xbridgeinfo';
+import {setTransactions} from '../../../../src/app/actions/app-actions';
 
 describe('WalletController Test Suite', function() {
   const storage = domStorage;
   const fakeApi = window.api;
   const db = new LWDB('test_LWDB');
 
-  before(function() {
+  beforeAll(function() {
     storage.clear();
     db.clear();
   });
@@ -419,7 +418,7 @@ describe('WalletController Test Suite', function() {
     balances.get('BTC').should.be.eql(["0.41", "0.41"]);
   });
 
-  after(function() {
+  afterAll(function() {
     storage.clear();
     db.clear();
   });

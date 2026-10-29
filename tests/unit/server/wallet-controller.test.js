@@ -1,4 +1,4 @@
-/*global describe,it,before,after,beforeEach*/
+import {afterAll, beforeAll, beforeEach, describe, it} from 'vitest';
 /*eslint quotes: 0, key-spacing: 0*/
 import should from 'should';
 import {all, create} from 'mathjs';
@@ -6,15 +6,15 @@ import fs from 'fs-extra';
 import os from 'os';
 import path from 'path';
 
-import XliteDaemon from '../../src/server/modules/xlite-daemon.js';
-import ConfController from '../../src/server/modules/conf-controller';
-import FakeRPCController from './fake-rpc-controller';
-import RPCTransaction from '../../src/app/types/rpc-transaction';
-import SimpleStorage from '../../src/server/modules/storage';
-import {storageKeys} from '../../src/server/constants';
-import TokenManifest from '../../src/app/modules/token-manifest';
-import Wallet from '../../src/server/modules/wallet';
-import WalletController from '../../src/server/modules/wallet-controller';
+import XliteDaemon from '../../../src/server/modules/xlite-daemon.js';
+import ConfController from '../../../src/server/modules/conf-controller';
+import FakeRPCController from '../helpers/fake-rpc-controller';
+import RPCTransaction from '../../../src/app/types/rpc-transaction';
+import SimpleStorage from '../../../src/server/modules/storage';
+import {storageKeys} from '../../../src/server/constants';
+import TokenManifest from '../../../src/app/modules/token-manifest';
+import Wallet from '../../../src/server/modules/wallet';
+import WalletController from '../../../src/server/modules/wallet-controller';
 
 const math = create(all, {
   number: 'BigNumber',
@@ -24,7 +24,7 @@ const { bignumber } = math;
 
 describe('WalletController Test Suite', function() {
   const tmp = path.join(os.tmpdir(), 'tests_walletcontroller_test_suite');
-  before(function() {
+  beforeAll(function() {
     if (fs.pathExistsSync(tmp))
       fs.removeSync(tmp);
     fs.mkdirSync(tmp);
@@ -252,7 +252,7 @@ describe('WalletController Test Suite', function() {
     should.not.exist(expectNull);
   });
 
-  after(function() {
+  afterAll(function() {
     if (fs.pathExistsSync(tmp))
       fs.removeSync(tmp);
   });

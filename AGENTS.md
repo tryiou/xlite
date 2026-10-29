@@ -35,10 +35,10 @@ npm start          # electron .
 npm run start-dev  # electron with remote debugging on :9222
 npm run watch      # incremental rebuilds during development
 
-npx vitest run     # modern unit suite (tests/unit/)  [also test:vitest*]
+npm test           # vitest unit suite (tests/unit/)
 ```
 
-- Tests: vitest on `tests/unit/` (modern) and electron-mocha on `tests/old/*` (legacy, `xvfb-maybe` for headless).
+- Tests: vitest on `tests/unit/` only (`vitest.config.mjs` + `tests/unit/setup-env.js` provide the window/localStorage/IndexedDB/electron bootstrap).
 - CI builds/publishes native packages only — no test step.
 
 ## Daemon integration (fragile coupling — change both sides together)

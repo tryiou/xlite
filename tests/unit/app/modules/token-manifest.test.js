@@ -1,9 +1,9 @@
+import {describe, it} from 'vitest';
 import 'should';
 
-import './rtests';
-import Token from '../../src/app/types/token';
-import TokenManifest from '../../src/app/modules/token-manifest';
-import XBridgeInfo from '../../src/app/types/xbridgeinfo';
+import Token from '../../../../src/app/types/token';
+import TokenManifest from '../../../../src/app/modules/token-manifest';
+import XBridgeInfo from '../../../../src/app/types/xbridgeinfo';
 
 describe('TokenManifest Test Suite', function() {
   const data = JSON.parse(`[{
