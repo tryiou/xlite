@@ -158,7 +158,8 @@ const SendModal = ({ activeWallet, wallets, altCurrency, currencyMultipliers, ba
     tb.addRecipient(new Recipient({address, amount: bn.toNumber(), description }));
     try {
       tb.fundTransaction(coins);
-    } catch (_err) {
+    } catch (err) {
+      handleError(err);
       setFees(0);
       setTotal(bn.toNumber());
       setMaxSelected(false);

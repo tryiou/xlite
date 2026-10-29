@@ -112,27 +112,24 @@ describe('WalletController Test Suite', function() {
       'rpcEnabled': false,
       'addressCount': 20
     }));
-    const req = async (url) => {
-      if (url === 'manifest-url') {
-        const o = {};
-        o.text = '{"manifest-latest.json":["b705da5df7d83ba3de48eb20fdc3cbf519ef6cc7","manifest-latest.json"]}';
-        return o;
-      } else if (url === 'manifest-latest.json') {
-        const o = {};
-        o.text = '[{"blockchain":"Blocknet","ticker":"BLOCK","ver_id":"blocknet--v4.0.1","ver_name":"Blocknetv4","conf_name":"blocknet.conf","dir_name_linux":"blocknet","dir_name_mac":"Blocknet","dir_name_win":"Blocknet","repo_url":"https://github.com/blocknetdx/blocknet","versions":["v4.3.0"],"xbridge_conf":"blocknet--v4.0.1.conf","wallet_conf":"blocknet--v4.0.1.conf"},{"blockchain":"Bitcoin","ticker":"BTC","ver_id":"bitcoin--v0.15.1","ver_name":"Bitcoinv0.15.x","conf_name":"bitcoin.conf","dir_name_linux":"bitcoin","dir_name_mac":"Bitcoin","dir_name_win":"Bitcoin","repo_url":"https://github.com/bitcoin/bitcoin","versions":["v0.15.1","v0.15.2"],"xbridge_conf":"bitcoin--v0.15.1.conf","wallet_conf":"bitcoin--v0.15.1.conf"}]';
-        return o;
-      } else if (url === 'xbridge-confs/blocknet--v4.0.1.conf') {
-        const o = {};
-        o.text = '[BLOCK]\\nTitle=Blocknet\\nAddress=\\nIp=127.0.0.1\\nPort=41414\\nUsername=\\nPassword=\\nAddressPrefix=26\\nScriptPrefix=28\\nSecretPrefix=154\\nCOIN=100000000\\nMinimumAmount=0\\nTxVersion=1\\nDustAmount=0\\nCreateTxMethod=BTC\\nGetNewKeySupported=true\\nImportWithNoScanSupported=true\\nMinTxFee=10000\\nBlockTime=60\\nFeePerByte=20\\nConfirmations=0';
-        return o;
-      } else if (url === 'xbridge-confs/bitcoin--v0.15.1.conf') {
-        const o = {};
-        o.text = '[BTC]\\nTitle=Bitcoin\\nAddress=\\nIp=127.0.0.1\\nPort=8332\\nUsername=\\nPassword=\\nAddressPrefix=0\\nScriptPrefix=5\\nSecretPrefix=128\\nCOIN=100000000\\nMinimumAmount=0\\nTxVersion=2\\nDustAmount=0\\nCreateTxMethod=BTC\\nMinTxFee=7500\\nBlockTime=600\\nGetNewKeySupported=false\\nImportWithNoScanSupported=false\\nFeePerByte=120\\nConfirmations=1';
-        return o;
+    // The daemon is the config source (master getCoins), so the cache it
+    // fills is what ConfController reads back. Seed that 11-field DTO array
+    // directly instead of replaying the removed BCF-fetch flow.
+    storage.setItem(storageKeys.COIN_CONFIGS, [
+      {
+        ticker: 'BLOCK', blockchain: 'Blocknet', verId: 'blocknet--v4.0.1',
+        addressPrefix: 26, scriptPrefix: 28, secretPrefix: 154,
+        coin: 100000000, feePerByte: 20, minTxFee: 10000, port: 41414,
+        dustAmount: 546
+      },
+      {
+        ticker: 'BTC', blockchain: 'Bitcoin', verId: 'bitcoin--v0.15.1',
+        addressPrefix: 0, scriptPrefix: 5, secretPrefix: 128,
+        coin: 100000000, feePerByte: 120, minTxFee: 7500, port: 8332,
+        dustAmount: 546
       }
-    };
+    ]);
     confController = new ConfController(storage, availableWallets);
-    await confController.updateLatest('manifest-url', 'xbridge-confs/', '0123456789', 'manifest-latest.json', req).should.be.finally.true();
     tokenManifest = new TokenManifest(confController.getManifest(), confController.getXBridgeInfo());
     xliteDaemon = new XliteDaemon(ccFunc, storage);
     xliteDaemon.loadConfs();

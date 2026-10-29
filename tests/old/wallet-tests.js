@@ -43,7 +43,7 @@ describe('Wallet Test Suite', function() {
       "xbridge_conf": "blocknet--v4.0.1.conf",
       "wallet_conf": "blocknet--v4.0.1.conf"
     });
-    token.xbinfo = new XBridgeInfo({ ticker: 'BLOCK', feeperbyte: 20, mintxfee: 10000, coin: 100000000, rpcport: 41414 });
+    token.xbinfo = new XBridgeInfo({ ticker: 'BLOCK', feeperbyte: 20, mintxfee: 10000, coin: 100000000, rpcport: 41414, dustAmount: 546 });
     conf = new CCWalletConf(token.ticker, {
       "rpcPassword": "test",
       "fee": 1.0E-4,
@@ -320,13 +320,15 @@ describe('Wallet Test Suite', function() {
     const recipients = [new Recipient({ address: 'yKjhThbgKHNh9iQYL2agreSAvw5tmJGkNW', amount: 10, description: '' })];
     should.not.exist(await wallet.send(recipients));
   });
-  it('Wallet.send() with bad xbridge info should use default', async function() {
+  it('Wallet.send() with missing xbridge info fails instead of inventing a dust floor', async function() {
+    // dustAmount comes from BCF via the daemon; with no xbridge info there is
+    // no threshold, and substituting one would silently drop valid outputs.
     const fakerpc = new FakeRPCController();
     const wallet = new Wallet(token, conf, appStorage);
     wallet.rpc = fakerpc;
     wallet._token.xbinfo = null;
     const recipients = [new Recipient({ address: 'yKjhThbgKHNh9iQYL2agreSAvw5tmJGkNW', amount: 10, description: '' })];
-    await wallet.send(recipients).should.be.finally.String().and.not.be.equal('');
+    should.not.exist(await wallet.send(recipients));
   });
   it('Wallet.send() with bad createRawTransaction rpc should fail', async function() {
     const fakerpc = new FakeRPCController();

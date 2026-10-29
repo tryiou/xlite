@@ -355,6 +355,10 @@ class Wallet {
    * @returns {Promise<null|string>} Returns txid on success, null on error
    */
   async send(recipients) {
+    if (!this._token || !this._token.xbinfo) {
+      logger.error(`failed to send ${this.ticker} because there is no xbridge info for ${this.ticker}`);
+      return null;
+    }
     if (this.rpc.isNull() || !this.rpcEnabled()) {
       logger.error(`failed to send ${this.ticker} because rpc is disabled`);
       return null;

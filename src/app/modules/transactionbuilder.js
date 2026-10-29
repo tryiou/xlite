@@ -1,7 +1,7 @@
 // Copyright (c) 2020 The Blocknet developers
 // Distributed under the MIT software license, see the accompanying
 // file LICENSE or http://www.opensource.org/licenses/mit-license.php.
-import {DUST_SATOSHIS,MAX_DECIMAL_PLACE} from '../constants';
+import {MAX_DECIMAL_PLACE} from '../constants';
 import Recipient from '../types/recipient';
 import XBridgeInfo from '../types/xbridgeinfo';
 
@@ -166,6 +166,7 @@ class TransactionBuilder {
 
     // Copy of recipients
     const outputs = this._recipients.slice();
+    this._assertOutputsNotDust(outputs, false);
 
     // Defaults fees include 1 input and recipient outputs
     let fees = bignumber(this.feeEstimate(1, outputs.length));
@@ -177,6 +178,7 @@ class TransactionBuilder {
       for (const output of outputs) {
         output.amount = math.subtract(bignumber(output.amount), reduceOutputAmountsBy).toNumber();
       }
+      this._assertOutputsNotDust(outputs, true);
       this._outputs = outputs;
       this._fees = fees.toNumber();
       return; // done
@@ -261,6 +263,7 @@ class TransactionBuilder {
           output.amount = math.subtract(amount, reduceOutputAmountsBy).toNumber();
           totalSendAmount = math.add(totalSendAmount, amount);
         }
+        this._assertOutputsNotDust(outputs, true);
       } else
         throw new Error('Not enough funds (2)');
     }
@@ -286,25 +289,50 @@ class TransactionBuilder {
   }
 
   /**
-   * Returns true if amount is dust. Uses daemon dustAmount when present and
-   * non-zero, else hardcoded DUST_SATOSHIS fallback. bcf DustAmount is
-   * canonical source of truth (interim data carries 0 placeholders meaning
-   * unspecified → fallback, until bcf populated with real per-coin values;
-   * see CoinConfig.toDtoMap interim 0→null mapping).
+   * True if amount is dust. The threshold is the daemon's dustAmount (BCF's
+   * per-coin DustAmount verbatim): a missing, zero, or non-numeric value means
+   * the coin has no dust gate, matching the daemon's own DustAmount=0
+   * semantics.
    * @param amount {number}
    * @return {boolean}
    */
   isDust(amount) {
-    if (!this._feeInfo || !this._feeInfo.coin)
-      return math.smallerEq(bignumber(amount), math.divide(bignumber(DUST_SATOSHIS), bignumber(1e8)));
-    const dustSat = (this._feeInfo.dustAmount != null && this._feeInfo.dustAmount !== 0)
-      ? this._feeInfo.dustAmount
-      : DUST_SATOSHIS;
+    if (!this._feeInfo || typeof this._feeInfo.dustAmount !== 'number'
+        || this._feeInfo.dustAmount <= 0)
+      return false;
     return math
-      .smallerEq(
+      .smaller(
         bignumber(amount),
-        math.divide(bignumber(dustSat), bignumber(this._feeInfo.coin))
+        math.divide(
+          bignumber(this._feeInfo.dustAmount),
+          bignumber(this._feeInfo.coin || 1e8)
+        )
       );
+  }
+
+  /**
+   * Refuse a recipient output below the coin's dust threshold.
+   *
+   * <p>This is the same rule the wallet applies to its own change and the node
+   * applies at mempool acceptance: an output below the threshold is not
+   * relayable, so building it only turns a clear mistake into a failed
+   * broadcast. Checked here rather than in isValid() so the caller gets the
+   * reason instead of a silent false, and checked after the subtract-fee
+   * shaving so an amount that only became dust once the fee was deducted is
+   * reported as such.
+   *
+   * @param outputs {Recipient[]}
+   * @param subtractFees {boolean}
+   * @throws {Error}
+   * @private
+   */
+  _assertOutputsNotDust(outputs, subtractFees) {
+    for (const output of outputs) {
+      if (!this.isDust(output.amount)) continue;
+      throw new Error(subtractFees
+        ? 'Transaction amount is too small to send after the fee has been deducted'
+        : 'Transaction amount too small');
+    }
   }
 
   /**

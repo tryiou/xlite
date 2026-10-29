@@ -64,10 +64,12 @@ export class FakeSpawn {
   stderrCallbacks = {};
   exitCallbacks = [];
   killed = false;
+  spawnCount = 0;
   _spawnedProcess = null;
 
   spawn = () => {
     const self = this;
+    this.spawnCount++;
     const stdoutOn = (function(eventName, func) {
       if (!self.stdoutCallbacks[eventName])
         self.stdoutCallbacks[eventName] = [];
@@ -128,6 +130,24 @@ export class FakeSpawn {
       for (const cb of cbs)
         cb(data);
     }
+  }
+
+  /**
+   * Resolves once a NEW process has spawned and registered its stdout handler.
+   * The daemon lifecycle methods await bin.json + binary reads before spawning,
+   * so a fixed number of microtask drains is not a synchronisation point and
+   * stdout emitted too early is silently dropped. Counting spawns also lets a
+   * caller wait for a second process (getCCMnemonic after createSPVWallet).
+   */
+  async waitForSpawn(timeoutMs = 5000, expected = this.spawnCount + 1) {
+    const deadline = Date.now() + timeoutMs;
+    while (this.spawnCount < expected || !this.stdoutCallbacks['data']) {
+      if (Date.now() >= deadline)
+        throw new Error(`FakeSpawn.waitForSpawn: spawn #${expected} / stdout handler never registered ` +
+          `(spawned ${this.spawnCount})`);
+      await new Promise(r => setTimeout(r, 5));
+    }
+    return this._spawnedProcess;
   }
 
   stderr(name, data = '') {

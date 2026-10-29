@@ -62,8 +62,8 @@ class ConfController {
               || typeof d.feePerByte === 'undefined' || typeof d.minTxFee === 'undefined'
               || typeof d.port === 'undefined')
             throw new Error(`malformed DTO for ${d.ticker}`);
-          // Normalize dustAmount to number|null for downstream isDust (bcf 0 already mapped to null in daemon toDtoMap)
-          if (d.dustAmount != null && typeof d.dustAmount !== 'number')
+          // dustAmount passes through verbatim; 0 is a real value.
+          if (typeof d.dustAmount !== 'number' || !Number.isInteger(d.dustAmount) || d.dustAmount < 0)
             throw new Error(`malformed dustAmount for ${d.ticker}`);
         }
         this._storage.setItem(storageKeys.COIN_CONFIGS, dtos);

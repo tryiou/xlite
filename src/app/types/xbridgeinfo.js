@@ -26,7 +26,7 @@ class XBridgeInfo {
    */
   rpcport = -1000;
   /**
-   * @type {number|null}
+   * @type {number|null} BCF's per-coin DustAmount in base units; 0 = no dust gate.
    */
   dustAmount = null;
 

@@ -655,7 +655,7 @@ describe('XliteDaemon Test Suite', function() {
       {
         fakeSpawn.clear();
         const p = cc.startSPV(password);
-        await Promise.resolve(); // let microtask queue drain (spawn + handler registration)
+        await fakeSpawn.waitForSpawn();
         fakeSpawn.stderr('data', 'critical error');
         const success = await p.catch(() => false);
         success.should.be.false();
@@ -664,7 +664,7 @@ describe('XliteDaemon Test Suite', function() {
       {
         fakeSpawn.clear();
         const p = cc.startSPV();
-        await Promise.resolve(); // let microtask queue drain (spawn + handler registration)
+        await fakeSpawn.waitForSpawn();
         fakeSpawn.stderr('data', 'error');
         fakeSpawn.close(1);
         const success = await p;
@@ -674,7 +674,7 @@ describe('XliteDaemon Test Suite', function() {
       {
         fakeSpawn.clear();
         const p = cc.startSPV();
-        await Promise.resolve(); // let microtask queue drain (spawn + handler registration)
+        await fakeSpawn.waitForSpawn();
         fakeSpawn.stdout('data', 'selection');
         fakeSpawn.close(0);
         const success = await p;
@@ -684,10 +684,10 @@ describe('XliteDaemon Test Suite', function() {
       {
         fakeSpawn.clear();
         const p = cc.startSPV(password);
-        await Promise.resolve(); // drain microtask queue — handlers registered
+        await fakeSpawn.waitForSpawn();
         fakeSpawn.stdout('data', 'Password:');
         setTimeout(() => {
-          fakeSpawn.stdout('data', 'master rpc server');
+          fakeSpawn.stdout('data', '[rpc-master] Master RPC server listening on port 41414.');
         }, 250);
         const success = await p;
         success.should.be.true();
@@ -697,10 +697,10 @@ describe('XliteDaemon Test Suite', function() {
         fakeSpawn.clear();
         rpcHelp.ccHelp = async () => false;
         const p = cc.startSPV(password);
-        await Promise.resolve(); // drain microtask queue — handlers registered
+        await fakeSpawn.waitForSpawn();
         fakeSpawn.stdout('data', 'Password:');
         setTimeout(() => {
-          fakeSpawn.stdout('data', 'master rpc server');
+          fakeSpawn.stdout('data', '[rpc-master] Master RPC server listening on port 41414.');
         }, 250);
         setTimeout(() => {
           rpcHelp.ccHelp = async () => true;
@@ -720,10 +720,10 @@ describe('XliteDaemon Test Suite', function() {
         cc2._execFile = fakeSpawn.spawn;
         cc2._spawn = fakeSpawn.spawn;
         const p1 = cc2.startSPV(password);
-        await Promise.resolve(); // drain microtask queue — handlers registered
+        await fakeSpawn.waitForSpawn();
         fakeSpawn.stdout('data', 'Password:');
         setTimeout(() => {
-          fakeSpawn.stdout('data', 'master rpc server');
+          fakeSpawn.stdout('data', '[rpc-master] Master RPC server listening on port 41414.');
         }, 250);
         const res = await p1;
         res.should.be.true();
@@ -772,8 +772,11 @@ describe('XliteDaemon Test Suite', function() {
             cc.createSPVWallet(password, createFromMnemonic)
               .then(resolve)
               .catch(reject);
-            fakeSpawn.stderr('data', 'error');
-            fakeSpawn.close(1);
+            (async () => {
+              await fakeSpawn.waitForSpawn();
+              fakeSpawn.stderr('data', 'error');
+              fakeSpawn.close(1);
+            })().catch(reject);
           });
         } catch (e) {
           err = e;
@@ -791,8 +794,11 @@ describe('XliteDaemon Test Suite', function() {
             cc.createSPVWallet(password, createFromMnemonic)
               .then(resolve)
               .catch(reject);
-            fakeSpawn.stderr('data', 'some fatal error');
-            fakeSpawn.close(1);
+            (async () => {
+              await fakeSpawn.waitForSpawn();
+              fakeSpawn.stderr('data', 'some fatal error');
+              fakeSpawn.close(1);
+            })().catch(reject);
           });
         } catch (e) {
           err = e;
@@ -808,16 +814,15 @@ describe('XliteDaemon Test Suite', function() {
           cc.createSPVWallet(password, createFromMnemonic)
             .then(resolve)
             .catch(reject);
-          setTimeout(() => {
-            fakeSpawn.stdout('data', 'master rpc server');
-          }, 250);
-          setTimeout(() => {
-            fakeSpawn.close(0); // triggers createSPVWallet close → calls getCCMnemonic (spawns, registers handlers)
-            setTimeout(() => {
-              fakeSpawn.stdout('data', testMnemonic); // getCCMnemonic's stdout handler now exists
-              fakeSpawn.close(0); // triggers getCCMnemonic close → resolves with mnemonic
-            }, 50);
-          }, 250);
+          (async () => {
+            const first = fakeSpawn.spawnCount + 1;
+            await fakeSpawn.waitForSpawn(5000, first);      // createSPVWallet's process
+            fakeSpawn.stdout('data', '[rpc-master] Master RPC server listening on port 41414.');
+            fakeSpawn.close(0);                             // → getCCMnemonic spawns its own process
+            await fakeSpawn.waitForSpawn(5000, first + 1);  // getCCMnemonic's process
+            fakeSpawn.stdout('data', testMnemonic);
+            fakeSpawn.close(0);                             // → resolves with the mnemonic
+          })().catch(reject);
         });
         res.should.equal(testMnemonic);
       }
@@ -834,11 +839,13 @@ describe('XliteDaemon Test Suite', function() {
               err = e;
               resolve();
             });
-          fakeSpawn.stdout('data', 'master rpc server');
-          fakeSpawn.close(0); // triggers createSPVWallet close → calls getCCMnemonic (spawns, registers handlers)
           (async () => {
-            await Promise.resolve(); // let getCCMnemonic's synchronous registration complete
-            fakeSpawn.close(0); // triggers getCCMnemonic close → rejects "failed to get the mnemonic"
+            const first = fakeSpawn.spawnCount + 1;
+            await fakeSpawn.waitForSpawn(5000, first);
+            fakeSpawn.stdout('data', '[rpc-master] Master RPC server listening on port 41414.');
+            fakeSpawn.close(0);                             // → getCCMnemonic spawns its own process
+            await fakeSpawn.waitForSpawn(5000, first + 1);
+            fakeSpawn.close(0);                             // → "failed to get the mnemonic"
           })();
         });
         should.exist(err);

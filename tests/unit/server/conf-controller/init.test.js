@@ -15,7 +15,7 @@ const TEST_PORT = 18233;
 const DTO = t => ({
   ticker: t, blockchain: `${t} chain`, verId: `${t.toLowerCase()}--v9`,
   addressPrefix: 26, scriptPrefix: 28, secretPrefix: 154,
-  coin: 100000000, feePerByte: 20, minTxFee: 10000, port: 41419, dustAmount: null,
+  coin: 100000000, feePerByte: 20, minTxFee: 10000, port: 41419, dustAmount: 546,
 });
 
 let homeDir;
