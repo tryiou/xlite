@@ -1,14 +1,14 @@
 {
   "linux": {
     "url": "https://github.com/tryiou/xlite-daemon/releases/download/v0.5.15/xlite-daemon-linux64",
-    "hash": "6e305b33118c105ea5f7043e96ff1b6e07b4f3ac7d0c7d15c3e32408a2ecb90b"
+    "hash": "cf997be44d87771f4aaa88f4aab3b01ab5992bed1cbfab9c7f38793f5c2b645d"
   },
   "mac": {
     "url": "https://github.com/tryiou/xlite-daemon/releases/download/v0.5.15/xlite-daemon-osx64",
-    "hash": "68a72b9fb72b94593983bdc1ef03d8de8c2224fc522e274247d74f63fe926fc8"
+    "hash": "9f59a5b96b12eab2e790784f7368ffe6a93e6f8b3f5e9716d017d577a868c85f"
   },
   "win": {
     "url": "https://github.com/tryiou/xlite-daemon/releases/download/v0.5.15/xlite-daemon-win64.exe",
-    "hash": "ebc60037a42e2ba0f38b2022dbc0cf5500e401cd955e038e0dbbe3cb607fa4fa"
+    "hash": "202e457e10ed5c11c0634ef0737b7e91fa9028b9089589b280eccbe1b21c6a95"
   }
 }
