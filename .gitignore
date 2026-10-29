@@ -61,7 +61,6 @@ typings/
 .next
 
 .idea
-package-lock.json
 /dist
 /dist-native
 /public/css
