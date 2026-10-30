@@ -653,6 +653,7 @@ describe('XliteDaemon Test Suite', function() {
       const fakeSpawn = new FakeSpawn();
       cc._execFile = fakeSpawn.spawn;
       cc._spawn = fakeSpawn.spawn;
+      cc._verifyPinnedBinary = async () => {}; // binary is fetched, not committed
       cc.startSPV.should.be.a.Function();
       const password = 'password';
 
@@ -723,6 +724,7 @@ describe('XliteDaemon Test Suite', function() {
         cc2.isWalletRPCRunning = async () => false;
         cc2._execFile = fakeSpawn.spawn;
         cc2._spawn = fakeSpawn.spawn;
+        cc2._verifyPinnedBinary = async () => {};
         const p1 = cc2.startSPV(password);
         await fakeSpawn.waitForSpawn();
         fakeSpawn.stdout('data', 'Password:');
