@@ -13,120 +13,157 @@ on:
       - dev
   workflow_dispatch:
 
+# Read-only by default; only the release job may write (release assets).
 permissions:
-  contents: write
+  contents: read
+
+# Never cancel a tagged release; superseded PR/branch builds are cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build_linux:
+  test:
+    name: test
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     steps:
-      - uses: actions/checkout@v4
-        if: github.event.pull_request.draft == false
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/jod
+          cache: npm
 
       - run: npm ci --no-audit
-      - run: |
-          npm run download-binaries-linux
-          chmod +x bin/linux/xlite-daemon*
-      - run: npm run build-native-linux
+      - run: npm test
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: artifacts-linux
-          path: |
-            dist-native/*.tar.gz
-            dist-native/*.AppImage
-            dist-native/*.deb
-            dist-native/latest*.yml
-
-      - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          name: Xlite ${{ github.ref_name}}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: true
-          files: |
-            dist-native/*.tar.gz
-            dist-native/*.AppImage
-            dist-native/*.deb
-            dist-native/latest*.yml
-
-  build_mac:
-    runs-on: macos-15-intel
+  build:
+    name: build_${{ matrix.name }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            os: ubuntu-22.04
+            target: linux
+            python: false
+            files: |
+              dist-native/*.AppImage
+              dist-native/*.deb
+              dist-native/*.tar.gz
+              dist-native/latest-linux*.yml
+          - name: mac
+            os: macos-15-intel
+            target: mac
+            python: true
+            files: |
+              dist-native/*.dmg
+              dist-native/*.dmg.blockmap
+              dist-native/*.zip
+              dist-native/latest-mac*.yml
+          - name: win
+            os: windows-2022
+            target: win
+            python: false
+            files: |
+              dist-native/*.exe
+              dist-native/*.exe.blockmap
+              dist-native/*.zip
+              dist-native/latest.yml
     steps:
-      - uses: actions/checkout@v4
-        if: github.event.pull_request.draft == false
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/jod
+          cache: npm
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      # electron-builder's dmg target shells out to a Python helper on mac.
+      - uses: actions/setup-python@v7
+        if: matrix.python
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - run: npm ci --no-audit
-      - run: |
-          npm run download-binaries-mac
-          chmod +x bin/mac/xlite-daemon*
-      - run: npm run build-native-mac
 
-      - uses: actions/upload-artifact@v4
+      # Daemon binaries are URL+sha256 pinned in bin.json; fetch before packaging.
+      - name: Fetch daemon binary
+        shell: bash
+        run: |
+          npm run download-binaries-${{ matrix.target }}
+          if [ "${{ matrix.target }}" != "win" ]; then
+            chmod +x bin/${{ matrix.target }}/xlite-daemon*
+          fi
+
+      - run: npm run build-native-${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v7
         with:
-          name: artifacts-mac
-          path: |
+          name: artifacts-${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+          retention-days: 7
+
+  # Single writer for the release. electron-updater feed files
+  # (latest.yml = Windows, latest-linux*.yml, latest-mac*.yml) are produced
+  # by electron-builder and must keep their names: the updater derives them
+  # from the platform, so renaming them breaks auto-update.
+  release:
+    name: release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist-native
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(
+            dist-native/*.AppImage
+            dist-native/*.deb
+            dist-native/*.tar.gz
             dist-native/*.dmg
             dist-native/*.dmg.blockmap
             dist-native/*.zip
-            dist-native/latest*.yml
-
-      - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          name: Xlite ${{ github.ref_name}}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: true
-          files: |
-            dist-native/*.dmg
-            dist-native/*.dmg.blockmap
-            dist-native/*.zip
-            dist-native/latest*.yml
-
-  build_win:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-        if: github.event.pull_request.draft == false
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: lts/jod
-
-      - run: npm ci --no-audit
-      - run: npm run download-binaries-win
-      - run: npm run build-native-win
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: artifacts-win
-          path: |
             dist-native/*.exe
             dist-native/*.exe.blockmap
-            dist-native/*.zip
             dist-native/latest*.yml
-
-      - uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/v')
-        with:
-          name: Xlite ${{ github.ref_name}}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
-          generate_release_notes: true
-          files: |
-            dist-native/*.exe
-            dist-native/*.exe.blockmap
-            dist-native/*.zip
-            dist-native/latest*.yml
+          )
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "no release assets found in dist-native" >&2
+            exit 1
+          fi
+          printf 'asset %s\n' "${files[@]}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Re-run of an existing tag: assets only, never the notes.
+            gh release upload "$TAG" --clobber "${files[@]}"
+          else
+            args=(--title "XLite $TAG" --generate-notes)
+            if [ "$PRERELEASE" = "true" ]; then
+              args+=(--prerelease)
+            fi
+            gh release create "$TAG" "${args[@]}" "${files[@]}"
+          fi
